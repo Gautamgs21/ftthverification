@@ -50,7 +50,7 @@ tr:nth-child(even) td{background:#f8fafc}td:focus{outline:2px solid var(--g);bac
 .ov{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
 .ov.show{display:flex}.md{background:#fff;border-radius:8px;width:420px;max-width:100%;max-height:85vh;display:flex;flex-direction:column}
 .md .ml{overflow:auto;padding:10px 16px}.md h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--bd)}.md .mf{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--bd)}
-.fl{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.fl b{font-size:12px;color:var(--g)}
+.fl{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.fl b{font-size:12px;color:var(--g)}.fc{display:flex;flex-direction:column;gap:4px;flex:1 1 150px}.fc select{width:100%}
 .cv{max-width:720px;height:320px}
 .sec{background:var(--n);color:#fff;padding:8px 14px;font-weight:700;font-family:Merriweather,serif;font-size:14px}
 .row{padding:10px 16px;border-bottom:1px solid #e2e8f0;display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:8px;align-items:start}
@@ -81,11 +81,11 @@ tr:nth-child(even) td{background:#f8fafc}td:focus{outline:2px solid var(--g);bac
 <script>
 const COLS=["S.No.","Name of the State/UT","Circle name","District name","Block name","Block code","GP name","GP code","Village name","Village code","Village poulation range","Name of BNU","BNU Mobile number","BNU unique id","OLT IP from which ONT of the customer connected","Name of the customer","Customer unique id","Type of Customer (Publicinstitution/PrivateEnterprise/Household)","Customer address","ONT MAC address","Latitude of FTTH connection","Longitude of FTTH connection","Date of activation of connection","Current FTTH connection status (Active/Permanently closed)","If active Connection age at the last day of reporting quarter","Data usage of the Customer (GB)","Permanently closed, then Date of permanently closed"];
 const FMAP={"State/UT":"Name of the State/UT","Circle":"Circle name","District":"District name","Block":"Block name","Gram Panchayat":"GP name","Village":"Village name"};
-const PAGES=[['dash','Dashboard','fa-gauge-high'],['db','Edit/DB','fa-database'],['visits','My Visits','fa-chart-simple'],['pro','Proforma','fa-file-lines'],['set','Settings','fa-gear']];
-const TITLES={dash:'Dashboard',db:'Edit / DB',visits:'My Visits',pro:'Proforma',set:'Settings'};
+const PAGES=[['dash','Dashboard','fa-gauge-high'],['db','Edit DB','fa-database'],['visits','My Visits','fa-chart-simple'],['pro','Proforma','fa-file-lines'],['set','Settings','fa-gear']];
+const TITLES={dash:'Dashboard',db:'Edit DB',visits:'My Visits',pro:'Proforma',set:'Settings'};
 const SUB={dash:'Overview',db:'Edit database',visits:'Completed surveys',pro:'Survey form A–N',set:'Preferences'};
-let DB=[],VIS={},cur='db',chart=null,cp=null;
-let S={page:1,rows:25,col:null,dir:1,zoom:100,list:'Unvisited',hidden:new Set(),fby:'State/UT',fval:'All',cfg:{bnu:'',off:'',des:''}};
+let DB=[],VIS={},cur='dash',chart=null,cp=null;
+let S={page:1,rows:25,col:null,dir:1,zoom:100,list:'Unvisited',hidden:new Set(),f:['','','','','',''],cfg:{bnu:'',off:'',des:''}};
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2200)};
 const vis=r=>!!VIS[r[COLS[0]]];
@@ -110,12 +110,14 @@ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(Object.entries(VIS).map
 $('dl').onclick=dlFull;
 $('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();
 /* dashboard */
-function uniq(c){return [...new Set(DB.map(r=>r[c]).filter(x=>x!==''))].sort()}
-function rDash(){const col=FMAP[S.fby],rs=S.fval=='All'?DB:DB.filter(r=>r[col]==S.fval),v=rs.filter(vis).length;
-$('v-dash').innerHTML=`<div class="pn">${head()}<div class="pb"><div class="fl"><b>FILTER BY</b><select id="fb">${Object.keys(FMAP).map(k=>`<option ${k==S.fby?'selected':''}>${k}</option>`).join('')}</select>
-<b>SELECT ${S.fby.toUpperCase()}</b><select id="fv"><option>All</option>${uniq(col).map(x=>`<option ${x==S.fval?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
-<div class="cv" style="margin-top:16px"><canvas id="ch"></canvas></div></div></div>`;
-$('fb').onchange=e=>{S.fby=e.target.value;S.fval='All';rDash()};$('fv').onchange=e=>{S.fval=e.target.value;rDash()};
+const FL=[['State','Name of the State/UT'],['Circle','Circle name'],['District','District name'],['Block','Block name'],['GP','GP name'],['Village','Village name']];
+function rDash(){let rs=DB;
+const sel=FL.map(([n,c],i)=>{const op=[...new Set(rs.map(r=>r[c]).filter(x=>x!==''))].sort();if(S.f[i]&&!op.includes(S.f[i]))S.f[i]='';
+const h=`<div class="fc"><b>SELECT ${n.toUpperCase()}</b><select data-l="${i}"><option value="">All</option>${op.map(x=>`<option ${x==S.f[i]?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+if(S.f[i])rs=rs.filter(r=>r[c]==S.f[i]);return h}).join('');
+const v=rs.filter(vis).length;
+$('v-dash').innerHTML=`<div class="pn">${head()}<div class="pb"><div class="fl">${sel}</div><div class="cv" style="margin-top:16px"><canvas id="ch"></canvas></div></div></div>`;
+$('v-dash').querySelectorAll('select').forEach(el=>el.onchange=()=>{const i=+el.dataset.l;S.f[i]=el.value;for(let j=i+1;j<6;j++)S.f[j]='';rDash()});
 chart&&chart.destroy();chart=new Chart($('ch'),{type:'bar',data:{labels:['Total Records','Visited','Pending'],datasets:[{data:[rs.length,v,rs.length-v],backgroundColor:['#1a2b45','#2f855a','#8b734b']}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}})}
 /* edit db */
 function list(){let a=DB.map((r,i)=>i);if(S.list=='Unvisited')a=a.filter(i=>!vis(DB[i]));else if(S.list=='Visited')a=a.filter(i=>vis(DB[i]));
@@ -203,5 +205,5 @@ function rSet(){$('v-set').innerHTML=`<div class="pn">${head()}<div class="pb"><
 <p style="padding:0 16px;color:#64748b">Data lives in this browser only. Use <b>Download DB</b> to save an updated Excel file.</p></div></div>`;
 $('ssv').onclick=()=>{S.cfg={bnu:$('s1').value,off:$('s2').value,des:$('s3').value};S.rows=+$('s4').value;save();toast('Settings saved')};
 $('sclr').onclick=async()=>{if(!confirm('Clear all data stored in this browser? Download first if needed.'))return;DB=[];VIS={};cp=null;await save();go('db')}}
-load();go('db');
+load();go('dash');
 </script></body></html>
