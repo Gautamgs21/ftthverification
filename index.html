@@ -14,7 +14,7 @@
 body{margin:0;background:var(--bg);color:var(--n);font:14px 'Segoe UI',system-ui,sans-serif}
 h1,h2,.nc span,.btn{font-family:Merriweather,Georgia,serif}
 header{position:sticky;top:0;z-index:20;background:#f1efe9}
-.w{padding:0 12px}
+.w{padding:0 12px;max-width:80%;margin:0 auto}
 .top{display:flex;justify-content:space-between;align-items:center;padding:10px 0 6px;border-bottom:2px solid var(--n)}
 .top h1{margin:0;font-size:clamp(20px,4vw,30px)}
 .sq{width:36px;height:36px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--n);cursor:pointer}
@@ -27,7 +27,7 @@ header{position:sticky;top:0;z-index:20;background:#f1efe9}
 .btn{padding:9px 14px;border-radius:4px;border:1px solid var(--n);font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--n);text-transform:uppercase}
 .btn.p{background:var(--n);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
 .sm{font-family:'Segoe UI',sans-serif;text-transform:none;font-weight:600;padding:7px 11px}
-main{margin:12px 0;padding:0 12px}
+main{margin:12px auto;padding:0 12px;max-width:80%}
 .pn{background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 3px #0001;margin-bottom:14px}
 .pn:fullscreen{overflow:auto;border-radius:0;margin:0}.pn:fullscreen .tw{max-height:calc(100vh - 170px)}
 .ph{padding:14px 16px;border-bottom:1px solid var(--bd)}.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -75,6 +75,7 @@ tr.vis td{background:#f0fbf3!important}tr.vis td:first-child{box-shadow:inset 4p
 .lc{width:360px;max-width:100%;background:#fff;border:1px solid var(--bd);border-radius:8px;padding:26px;box-shadow:0 6px 24px #0002}
 .lc h1{margin:0 0 4px;font-size:26px}.lc p{margin:0 0 16px;color:var(--g);font-size:12px;letter-spacing:1px}.lc input{width:100%;margin-bottom:10px}
 .view{display:none}.view.on{display:block}
+@media(max-width:1024px){.w,main{max-width:100%}}
 @media(max-width:700px){.nc{width:calc(33.3% - 10px);min-width:90px;height:78px}.cards{gap:10px;flex:1 1 100%}.acts{flex-direction:row;flex:1 1 100%}.acts .btn{flex:1}.row{grid-template-columns:1fr}.tb .sp{margin-left:0}}
 </style></head><body>
 <div class="ov show" id="lg"><form class="lc" id="lf"><h1>FTTH Verification</h1><p>SIGN IN</p>
