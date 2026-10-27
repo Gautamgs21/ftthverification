@@ -1,38 +1,34 @@
 import { MongoClient } from 'mongodb';
 import crypto from 'node:crypto';
 
-let client;
-let db;
+let cachedClient = null;
+let cachedDb = null;
 
 export async function getDb() {
-  // If we already have a database object, check if it's still alive
-  if (db) {
-    try {
-      // A quick "ping" to see if the connection is still open
-      await db.command({ ping: 1 });
-      return db;
-    } catch (e) {
-      // If it fails (Topology is closed), reset everything to reconnect
-      console.log("MongoDB connection closed. Reconnecting...");
-      client = null;
-      db = null;
-    }
+  // 1. If we already have a working connection, reuse it!
+  if (cachedClient && cachedDb) {
+    return cachedDb;
   }
 
-  // If we don't have a connection, create a new one
-  const newClient = new MongoClient(process.env.MONGODB_URI, { 
-    maxPoolSize: 5,
-    serverSelectionTimeoutMS: 5000 // Wait 5 seconds max for a connection
+  // 2. If not, create a new client with serverless-friendly options
+  const client = new MongoClient(process.env.MONGODB_URI, {
+    maxPoolSize: 5,               // Keep the pool small for Vercel
+    serverSelectionTimeoutMS: 5000, // Fail fast if Atlas is unreachable
+    connectTimeoutMS: 10000,
   });
-  
+
   try {
-    await newClient.connect();
-    client = newClient; // Only save it if it connects successfully!
-    db = client.db(process.env.MONGODB_DB || 'ftthdb');
+    await client.connect();
+    const db = client.db(process.env.MONGODB_DB || 'ftthdb');
+    
+    // 3. Cache the successful connection for the next request
+    cachedClient = client;
+    cachedDb = db;
+    
     return db;
   } catch (error) {
     console.error("Database connection failed:", error);
-    throw error; 
+    throw error;
   }
 }
 
