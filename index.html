@@ -9,10 +9,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
-:root{--n:#1a2b45;--g:#8b734b;--b:#f3ede4;--bg:#f1f5f9;--bd:#cbd5e1}
+:root{--n:#1a2b45;--g:#8b734b;--b:#f3ede4;--bg:#f1f5f9;--bd:#cbd5e1;--font:'Aptos Serif', Aptos, 'Merriweather', Georgia, serif}
 *{box-sizing:border-box}[hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--n);font:14px 'Segoe UI',system-ui,sans-serif}
-h1,h2,.nc span,.btn{font-family:Merriweather,Georgia,serif}
+body{margin:0;background:var(--bg);color:var(--n);font:14px var(--font)}
+h1,h2,.nc span,.btn{font-family:var(--font)}
 header{position:sticky;top:0;z-index:20;background:#f1efe9}
 .w{padding:0 12px;max-width:80%;margin:0 auto}
 .top{display:flex;justify-content:space-between;align-items:center;padding:10px 0 6px;border-bottom:2px solid var(--n)}
@@ -26,7 +26,7 @@ header{position:sticky;top:0;z-index:20;background:#f1efe9}
 .acts{display:flex;flex-direction:column;gap:8px;min-width:210px}
 .btn{padding:9px 14px;border-radius:4px;border:1px solid var(--n);font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--n);text-transform:uppercase}
 .btn.p{background:var(--n);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
-.sm{font-family:'Segoe UI',sans-serif;text-transform:none;font-weight:600;padding:7px 11px}
+.sm{font-family:var(--font);text-transform:none;font-weight:600;padding:7px 11px}
 main{margin:12px auto;padding:0 12px;max-width:80%}
 .pn{background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 3px #0001;margin-bottom:14px}
 .pn:fullscreen{overflow:auto;border-radius:0;margin:0}.pn:fullscreen .tw{max-height:calc(100vh - 170px)}
@@ -35,7 +35,7 @@ main{margin:12px auto;padding:0 12px;max-width:80%}
 .pb{padding:14px 16px}
 .tb{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bd)}
 .tb .sp{margin-left:auto}
-.tbtn,.zg{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--bd);border-radius:4px;background:#fff;color:var(--n);font:600 13px 'Segoe UI',sans-serif;cursor:pointer}
+.tbtn,.zg{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--bd);border-radius:4px;background:#fff;color:var(--n);font:600 13px var(--font);cursor:pointer}
 .tbtn:disabled{opacity:.45;cursor:not-allowed}.zg{padding:0}.zg button{border:0;background:none;color:var(--n);height:100%;padding:0 10px;cursor:pointer;font:inherit}.zg span{font-size:12px;padding:0 4px}
 .rel{position:relative}
 .pop{position:absolute;top:calc(100% + 9px);left:0;background:#fff;border:1px solid var(--bd);border-radius:6px;box-shadow:0 6px 18px #0003;padding:10px;z-index:15;min-width:250px;max-height:320px;overflow:auto;display:none}
@@ -55,13 +55,13 @@ tr.vis td{background:#f0fbf3!important}tr.vis td:first-child{box-shadow:inset 4p
 .ov{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
 .ov.show{display:flex}#lg{background:var(--bg);z-index:80}
 .md{background:#fff;border-radius:8px;width:460px;max-width:100%;max-height:88vh;display:flex;flex-direction:column;position:relative;box-shadow:0 10px 40px #0005}
-.md .ml{overflow:auto;padding:10px 16px}.md h3{margin:0;padding:14px 44px 14px 16px;border-bottom:1px solid var(--bd);font-family:Merriweather,serif}.md .mf{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--bd)}
+.md .ml{overflow:auto;padding:10px 16px}.md h3{margin:0;padding:14px 44px 14px 16px;border-bottom:1px solid var(--bd);font-family:var(--font)}.md .mf{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--bd)}
 .x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:var(--n)}
 .lb{display:block;margin:12px 0 4px;font-size:12px;color:var(--g);letter-spacing:.5px}.cg{display:grid;grid-template-columns:1fr;max-height:200px;overflow:auto;border:1px solid var(--bd);border-radius:4px;padding:4px 8px}
 .rd label{display:inline-flex;gap:5px;margin-right:16px;align-items:center}
 .fl{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.fl b{font-size:12px;color:var(--g)}.fc{display:flex;flex-direction:column;gap:4px;flex:1 1 150px}.fc select{width:100%}
 .cv{width:100%;height:clamp(300px,calc(100vh - 360px),640px)}
-.sec{background:var(--n);color:#fff;padding:8px 14px;font-weight:700;font-family:Merriweather,serif;font-size:14px;border-radius:0}
+.sec{background:var(--n);color:#fff;padding:8px 14px;font-weight:700;font-family:var(--font);font-size:14px;border-radius:0}
 .row{padding:10px 16px;border-bottom:1px solid #e2e8f0;display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:8px;align-items:start}
 .row>label{font-weight:600;font-size:13px}.o{display:inline-flex;gap:5px;margin:2px 14px 2px 0;align-items:center;font-weight:400}
 .row input[type=text],.row input[type=password],.row input[type=date],.row textarea{width:100%}.ro{background:#f8fafc;padding:7px 9px;border:1px dashed var(--bd);border-radius:4px;min-height:34px}
@@ -75,6 +75,10 @@ tr.vis td{background:#f0fbf3!important}tr.vis td:first-child{box-shadow:inset 4p
 .lc{width:360px;max-width:100%;background:#fff;border:1px solid var(--bd);border-radius:8px;padding:26px;box-shadow:0 6px 24px #0002}
 .lc h1{margin:0 0 4px;font-size:26px}.lc p{margin:0 0 16px;color:var(--g);font-size:12px;letter-spacing:1px}.lc input{width:100%;margin-bottom:10px}
 .view{display:none}.view.on{display:block}
+.vis-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;margin-top:15px}
+.v-card{background:var(--b);border:1px solid var(--bd);border-radius:8px;padding:15px;text-align:center;box-shadow:0 1px 3px #0001}
+.v-card h3{margin:0 0 8px;font-size:12px;color:var(--g);letter-spacing:.5px}
+.v-card .v-num{margin:0;font-size:28px;font-weight:700;color:var(--n)}
 @media(max-width:1024px){.w,main{max-width:100%}}
 @media(max-width:700px){.nc{width:calc(33.3% - 10px);min-width:90px;height:78px}.cards{gap:10px;flex:1 1 100%}.acts{flex-direction:row;flex:1 1 100%}.acts .btn{flex:1}.row{grid-template-columns:1fr}.tb .sp{margin-left:0}}
 </style></head><body>
@@ -101,7 +105,7 @@ const TITLES={dash:'Dashboard',db:'Edit DB',visits:'My Visits',pro:'Proforma',se
 let DB=[],VIS={},VST={},SCH=[],cur='dash',chart=null,cp=null;
 const mk=()=>({page:1,rows:25,col:null,dir:1,zoom:100,list:'All',hidden:new Set(),sel:new Set()});
 const ST={db:mk(),plan:mk(),view:mk()};
-const S={f:['','','','','',''],vf:['','','','','',''],pf:['','','','','',''],pd:false,vtab:'up',vs:null,pdate:'',pname:'',draft:{}};
+const S={f:['','','','','',''],vf:['','','','','',''],pf:['','','','','',''],pd:false,vtab:'up',vs:null,pdate:'',pname:'',draft:{},vfilter:'overall'};
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const toast=m=>{const t=$('toast');(document.fullscreenElement||document.body).appendChild(t);t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2400)};
@@ -222,9 +226,54 @@ $('bk').onclick=()=>{S.vs=null;rVisits()};T($('vt'),ST.view,()=>s.snos.map(idx).
 const card=s=>`<div class="vc"><div><b>${esc(s.name)}</b><br><small>${s.date} · ${s.snos.length} places · ${s.snos.filter(n=>VST[n]).length} visited</small></div><div><button class="tbtn" data-o="${s.id}">Open</button> <button class="tbtn" data-d="${s.id}"><i class="fa-solid fa-trash"></i></button></div></div>`;
 const up=SCH.filter(s=>s.date>=td).sort((a,b)=>a.date.localeCompare(b.date)),pv=SCH.filter(s=>s.date<td).sort((a,b)=>b.date.localeCompare(a.date)),U=S.vtab=='up';
 if(!S.pdate)S.pdate=td;let fb;
-V.innerHTML=`<div class="pn">${head()}<div class="pb tabs"><button class="btn ${U?'p':''}" data-t="up">Upcoming Visits (${up.length})</button><button class="btn ${U?'':'p'}" data-t="pv">Previous Visits (${pv.length})</button></div></div>`+
+
+const isInPeriod = (dateStr, period) => {
+    if (!dateStr) return false;
+    if (period === 'overall') return true;
+    const d = new Date(dateStr);
+    const now = new Date();
+    if (period === 'today') return d.toDateString() === now.toDateString();
+    if (period === 'week') {
+        const day = now.getDay() || 7; 
+        const first = new Date(now);
+        first.setDate(now.getDate() - day + 1);
+        first.setHours(0,0,0,0);
+        return d >= first;
+    }
+    if (period === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (period === 'year') return d.getFullYear() === now.getFullYear();
+    return true;
+};
+let carriedOut = 0, scheduled = 0, left = 0;
+Object.values(VST).forEach(date => { if(isInPeriod(date, S.vfilter)) carriedOut++; });
+SCH.forEach(s => { if (isInPeriod(s.date, S.vfilter)) { s.snos.forEach(n => { scheduled++; if (!VST[n]) left++; }); } });
+const statsHtml = `
+    <div class="vis-cards">
+      <div class="v-card"><h3>Total Visits Carried Out</h3><p class="v-num">${carriedOut}</p></div>
+      <div class="v-card"><h3>Total Visits Scheduled</h3><p class="v-num">${scheduled}</p></div>
+      <div class="v-card"><h3>Total Visits Left</h3><p class="v-num">${left}</p></div>
+    </div>
+`;
+
+V.innerHTML=`<div class="pn">${head()}
+<div class="pb tabs" style="border-bottom:none;padding-bottom:0;"><button class="btn ${U?'p':''}" data-t="up">Upcoming Visits (${up.length})</button><button class="btn ${U?'':'p'}" data-t="pv">Previous Visits (${pv.length})</button></div>
+<div class="pb">
+  <div class="fl" style="margin-bottom:15px;"><b>TIMEFRAME</b>
+    <select id="v-time-filter" style="margin-left:8px;width:150px;">
+      <option value="overall" ${S.vfilter=='overall'?'selected':''}>Overall</option>
+      <option value="year" ${S.vfilter=='year'?'selected':''}>This Year</option>
+      <option value="month" ${S.vfilter=='month'?'selected':''}>This Month</option>
+      <option value="week" ${S.vfilter=='week'?'selected':''}>This Week</option>
+      <option value="today" ${S.vfilter=='today'?'selected':''}>Today</option>
+    </select>
+  </div>
+  ${statsHtml}
+</div></div>`+
 (U?`<div class="pn"><div class="sec">Upcoming Visits</div>${up.map(card).join('')||'<div class="empty">No upcoming visits scheduled.</div>'}</div>`:`<div class="pn"><div class="sec">Previous Visits</div>${pv.map(card).join('')||'<div class="empty">No previous visits.</div>'}</div>`);
-if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>VISIT DATE</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button></div></div></div><div class="pn" id="pt"></div>`);
+
+$('v-time-filter').onchange=e=>{S.vfilter=e.target.value;rVisits()};
+
+if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>DATE OF VISIT</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button></div></div></div><div class="pn" id="pt"></div>`);
 fbind(S.vf,V,rVisits);$('pdt').oninput=e=>S.pdate=e.target.value;$('pnm').oninput=e=>S.pname=e.target.value;
 T($('pt'),ST.plan,()=>fb.ix,{sel:1,title:'SELECT PLACES TO VISIT',onsel:()=>$('pcn').textContent=ST.plan.sel.size});
 $('psv').onclick=()=>{if(!ST.plan.sel.size)return toast('Select at least one row');if(!S.pdate)return toast('Pick a visit date');
