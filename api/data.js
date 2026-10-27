@@ -1,14 +1,5 @@
-import { MongoClient, ObjectId } from 'mongodb';
-
-// Re-used between invocations so Vercel doesn't open a new connection every request
-let client;
-async function getDb() {
-  if (!client) {
-    client = new MongoClient(process.env.MONGODB_URI, { maxPoolSize: 5 });
-    await client.connect();
-  }
-  return client.db(process.env.MONGODB_DB || 'ftthdb');
-}
+import { ObjectId } from 'mongodb';
+import { getDb, cors, requireUser } from './_lib.js';
 
 // strip _id and make S.No. numeric when it looks numeric (matches how your data was imported)
 const clean = r => {
@@ -18,17 +9,12 @@ const clean = r => {
 };
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
-  if (req.method === 'OPTIONS') return res.status(204).end();
-
+  if (cors(req, res)) return;
   if (!process.env.MONGODB_URI) return res.status(500).json({ error: 'MONGODB_URI is not set' });
-  const key = process.env.API_KEY;
-  if (key && req.headers.authorization !== 'Bearer ' + key) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const db = await getDb();
+    if (!(await requireUser(req, res, db))) return;
     const col = db.collection(process.env.MONGODB_COLLECTION || 'data'); // your customer records
     const meta = db.collection('ftth_meta'); // visits, survey answers, schedules
 
