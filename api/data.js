@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 // Re-used between invocations so Vercel doesn't open a new connection every request
 let client;
@@ -7,8 +7,15 @@ async function getDb() {
     client = new MongoClient(process.env.MONGODB_URI, { maxPoolSize: 5 });
     await client.connect();
   }
-  return client.db(process.env.MONGODB_DB || 'ftth');
+  return client.db(process.env.MONGODB_DB || 'ftthdb');
 }
+
+// strip _id and make S.No. numeric when it looks numeric (matches how your data was imported)
+const clean = r => {
+  const { _id, ...x } = r;
+  if (/^\d+$/.test(String(x['S.No.']))) x['S.No.'] = Number(x['S.No.']);
+  return x;
+};
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,37 +29,49 @@ export default async function handler(req, res) {
 
   try {
     const db = await getDb();
-    const recCol = db.collection('records');
-    const meta = db.collection('meta');
+    const col = db.collection(process.env.MONGODB_COLLECTION || 'data'); // your customer records
+    const meta = db.collection('ftth_meta'); // visits, survey answers, schedules
 
     if (req.method === 'GET') {
-      const records = await recCol.find({}, { projection: { _id: 0, _o: 0 } }).sort({ _o: 1 }).toArray();
-      const m = await meta.findOne({ _id: 'state' });
-      const extra = m && m.json ? JSON.parse(m.json) : {};
-      return res.status(200).json({
-        records,
-        visits: extra.visits || {},
-        status: extra.status || {},
-        schedules: extra.schedules || []
-      });
+      const page = Math.max(0, parseInt(req.query.page) || 0);
+      const size = Math.min(2000, parseInt(req.query.size) || 1000);
+      const total = await col.estimatedDocumentCount();
+      const records = await col.find({}).sort({ _id: 1 }).skip(page * size).limit(size).toArray();
+      const out = { records, total };
+      if (page === 0) {
+        const m = await meta.findOne({ _id: 'state' });
+        const x = m && m.json ? JSON.parse(m.json) : {};
+        out.visits = x.visits || {};
+        out.status = x.status || {};
+        out.schedules = x.schedules || [];
+      }
+      return res.status(200).json(out);
     }
 
     if (req.method === 'PUT') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
       const recs = Array.isArray(b.records) ? b.records : [];
-      if (recs.length) {
-        const ops = recs.map((r, i) => ({
-          replaceOne: { filter: { _id: String(r['S.No.']) }, replacement: { ...r, _o: i }, upsert: true }
-        }));
-        await recCol.bulkWrite(ops, { ordered: false });
-        await recCol.deleteMany({ _id: { $nin: recs.map(r => String(r['S.No.'])) } });
+      const withId = recs.filter(r => r._id);
+      const noId = recs.filter(r => !r._id);
+      if (withId.length) {
+        await col.bulkWrite(
+          withId.map(r => ({ replaceOne: { filter: { _id: new ObjectId(r._id) }, replacement: clean(r) } })),
+          { ordered: false }
+        );
       }
-      await meta.replaceOne(
-        { _id: 'state' },
-        { _id: 'state', json: JSON.stringify({ visits: b.visits || {}, status: b.status || {}, schedules: b.schedules || [] }) },
-        { upsert: true }
-      );
-      return res.status(200).json({ ok: true, records: recs.length });
+      const ids = {};
+      if (noId.length) {
+        const ins = await col.insertMany(noId.map(clean));
+        noId.forEach((r, i) => { ids[String(r['S.No.'])] = String(ins.insertedIds[i]); });
+      }
+      if (b.visits || b.status || b.schedules) {
+        await meta.replaceOne(
+          { _id: 'state' },
+          { _id: 'state', json: JSON.stringify({ visits: b.visits || {}, status: b.status || {}, schedules: b.schedules || [] }) },
+          { upsert: true }
+        );
+      }
+      return res.status(200).json({ ok: true, ids });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
