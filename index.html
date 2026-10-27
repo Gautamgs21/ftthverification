@@ -112,14 +112,24 @@ const payload=()=>({records:DB,visits:VIS,status:VST,schedules:SCH});
 async function saveLocal(){try{const d=await idb();d&&d.transaction('k','readwrite').objectStore('k').put(payload(),'s')}catch(e){}}
 async function loadLocal(){const d=await idb();if(!d)return;await new Promise(r=>{const q=d.transaction('k').objectStore('k').get('s');q.onsuccess=()=>{const v=q.result;if(v){DB=v.records||[];VIS=v.visits||{};VST=v.status||{};SCH=v.schedules||[]}r()};q.onerror=r})}
 const hdr=c=>({'Content-Type':'application/json',...(c.key?{Authorization:'Bearer '+c.key}:{})});
-async function pull(show){const c=cfg();if(!c.api)return show?'✖ No API URL saved':'';
-try{const r=await fetch(c.api.replace(/\/$/,'')+'/data',{headers:hdr(c)}),t=await r.text();let d;
+const DIRTY=new Set();let busy=false;
+async function pull(show){const c=cfg();if(!c.api)return show?'✖ No API URL saved':'';const u=c.api.replace(/\/$/,'')+'/data';
+try{let all=[],tot=1,p=0,m={};
+while(all.length<tot){const r=await fetch(u+'?page='+p+'&size=1000',{headers:hdr(c)}),t=await r.text();let d;
 try{d=JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status+' – reply was not JSON (wrong URL, or a Vercel login/protection page)')}
 if(!r.ok)throw new Error('HTTP '+r.status+' – '+(d.error||'error'));
-if(!(d.records||[]).length&&DB.length){save();toast('MongoDB is empty – uploading your local data');return '✔ Connected. Database was empty, so your '+DB.length+' local records are being uploaded.'}
-DB=d.records||[];VIS=d.visits||{};VST=d.status||{};SCH=d.schedules||[];await saveLocal();toast('Loaded from MongoDB');return '✔ Connected – '+DB.length+' records loaded'}
+if(p==0)m=d;tot=d.total??d.records.length;all=all.concat(d.records);p++;if(!d.records.length)break;if(show)$('dbmsg').textContent='Loading '+all.length+' / '+tot+'…'}
+if(!all.length&&DB.length){DB.forEach(r=>DIRTY.add(String(r[COLS[0]])));save();toast('MongoDB is empty – uploading your local data');return '✔ Connected. Database was empty, so your '+DB.length+' local records are being uploaded.'}
+DB=all;VIS=m.visits||{};VST=m.status||{};SCH=m.schedules||[];DIRTY.clear();await saveLocal();toast('Loaded from MongoDB');return '✔ Connected – '+DB.length+' records loaded'}
 catch(e){toast('Database unreachable – using local copy');return '✖ '+(e.message||e)}}
-let ptm;function save(){saveLocal();const c=cfg();if(!c.api)return;clearTimeout(ptm);ptm=setTimeout(()=>fetch(c.api.replace(/\/$/,'')+'/data',{method:'PUT',headers:hdr(c),body:JSON.stringify(payload())}).catch(()=>toast('Sync to MongoDB failed')),1500)}
+let ptm;
+function save(ns){[].concat(ns||[]).forEach(n=>DIRTY.add(String(n)));saveLocal();const c=cfg();if(!c.api)return;clearTimeout(ptm);ptm=setTimeout(push,1500)}
+async function push(){const c=cfg();if(!c.api)return;if(busy){ptm=setTimeout(push,1500);return}busy=true;
+try{const u=c.api.replace(/\/$/,'')+'/data',ids=[...DIRTY];
+for(let i=0;i<Math.max(ids.length,1);i+=500){const set=new Set(ids.slice(i,i+500)),rs=DB.filter(r=>set.has(String(r[COLS[0]]))),body={records:rs};if(i==0){body.visits=VIS;body.status=VST;body.schedules=SCH}
+const r=await fetch(u,{method:'PUT',headers:hdr(c),body:JSON.stringify(body)});if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();
+Object.entries(d.ids||{}).forEach(([n,id])=>{const x=DB.find(y=>String(y[COLS[0]])==n);if(x)x._id=id});rs.forEach(x=>DIRTY.delete(String(x[COLS[0]])))}
+saveLocal()}catch(e){toast('Sync to MongoDB failed')}busy=false}
 /* ---------- login ---------- */
 const hash=async s=>{try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(s)}};
 const getUsers=async()=>{let u=JSON.parse(localStorage.getItem('ftth_users')||'null');if(!u){const o=JSON.parse(localStorage.getItem('ftth_acct')||'null');u=[o||{u:'admin',h:await hash('admin123')}];putUsers(u)}return u};
@@ -141,9 +151,9 @@ $('file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)r
 try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
 if(!rows.length)return toast('File is empty');if(!('Customer unique id' in rows[0]))return toast('Columns do not match the DB format');
 const key=r=>String(r['Customer unique id']||'').trim()||JSON.stringify(COLS.slice(1).map(c=>r[c]));
-const seen=new Set(DB.map(key)),used=new Set(DB.map(r=>String(r[COLS[0]])));let max=DB.reduce((m,r)=>Math.max(m,+r[COLS[0]]||0),0),add=0,skip=0;
-rows.forEach(r=>{const k=key(r);if(seen.has(k)){skip++;return}seen.add(k);const o={};COLS.forEach(c=>o[c]=r[c]??'');let s=String(o[COLS[0]]).trim();if(!s||used.has(s))s=String(++max);else max=Math.max(max,+s||max);o[COLS[0]]=s;used.add(s);DB.push(o);add++});
-save();go(cur);toast(`${add} added, ${skip} duplicate${skip==1?'':'s'} skipped`)}catch(x){toast('Could not read file')}};
+const seen=new Set(DB.map(key)),used=new Set(DB.map(r=>String(r[COLS[0]])));let max=DB.reduce((m,r)=>Math.max(m,+r[COLS[0]]||0),0),add=0,skip=0;const ns=[];
+rows.forEach(r=>{const k=key(r);if(seen.has(k)){skip++;return}seen.add(k);const o={};COLS.forEach(c=>o[c]=r[c]??'');let s=String(o[COLS[0]]).trim();if(!s||used.has(s))s=String(++max);else max=Math.max(max,+s||max);o[COLS[0]]=s;used.add(s);DB.push(o);ns.push(s);add++});
+save(ns);go(cur);toast(`${add} added, ${skip} duplicate${skip==1?'':'s'} skipped`)}catch(x){toast('Could not read file')}};
 /* ---------- Download DB popup ---------- */
 const saveBlob=(b,n)=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)};
 $('dl').onclick=()=>{$('dcols').innerHTML=COLS.map(c=>`<label><input type="checkbox" value="${esc(c)}" checked>${esc(c)}</label>`).join('');$('dm').classList.add('show')};
@@ -192,7 +202,7 @@ if(t.matches('.pop input')){t.checked?st.hidden.delete(t.dataset.c):st.hidden.ad
 else if(t.matches('.lt')){st.list=t.value;st.page=1;draw()}else if(t.matches('.rp')){st.rows=+t.value;st.page=1;draw()}
 else if(t.matches('.sa')){pg.forEach(i=>{const n=String(DB[i][COLS[0]]);t.checked?st.sel.add(n):st.sel.delete(n)});draw();o.onsel&&o.onsel()}
 else if(t.matches('.rc')){const n=t.closest('tr').dataset.n;t.checked?st.sel.add(n):st.sel.delete(n);o.onsel&&o.onsel()}};
-host.ondblclick=e=>{clearTimeout(host._ct);const td=e.target.closest('td[data-k]');if(!td)return;td.contentEditable=true;td.focus();td.onblur=()=>{td.contentEditable=false;const i=idx(td.parentNode.dataset.n);if(i>=0&&DB[i][td.dataset.k]!=td.textContent){DB[i][td.dataset.k]=td.textContent;save()}}};
+host.ondblclick=e=>{clearTimeout(host._ct);const td=e.target.closest('td[data-k]');if(!td)return;td.contentEditable=true;td.focus();td.onblur=()=>{td.contentEditable=false;const i=idx(td.parentNode.dataset.n);if(i>=0&&DB[i][td.dataset.k]!=td.textContent){DB[i][td.dataset.k]=td.textContent;save(td.parentNode.dataset.n)}}};
 host.oncontextmenu=e=>{const tr=e.target.closest('tbody tr');if(!tr)return;e.preventDefault();const n=tr.dataset.n,cm=$('cm');(document.fullscreenElement||document.body).appendChild(cm);
 cm.innerHTML='<div data-v="1">✔ Add to Visited</div><div data-v="0">✖ Add to Non Visited</div>';cm.style.display='block';cm.style.left=Math.min(e.clientX,innerWidth-210)+'px';cm.style.top=Math.min(e.clientY,innerHeight-100)+'px';
 cm.onclick=ev=>{const d=ev.target.closest('[data-v]');if(d){setV(n,d.dataset.v=='1');draw()}}};
@@ -253,7 +263,7 @@ ${SEC.map(([t,fs])=>(t?`<div class="sec">${t}</div>`:'')+fs.map(([l,ty,op])=>fld
 P.innerHTML=h;fbind(S.pf,P,()=>{keep();rPro()});
 $('cs').onchange=e=>{S.draft={};cp=e.target.value===''?null:+e.target.value;rPro()};$('pbl').onclick=()=>{S.draft={};cp=null;rPro()};$('prs').onclick=()=>{S.draft={};rPro()};
 $('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};
-P.querySelectorAll('.dg input').forEach(i=>i.onchange=()=>{DB[cp][i.dataset.c]=i.value;save();keep();toast('DB updated');rPro()});
+P.querySelectorAll('.dg input').forEach(i=>i.onchange=()=>{DB[cp][i.dataset.c]=i.value;save(DB[cp][COLS[0]]);keep();toast('DB updated');rPro()});
 $('pf').onsubmit=e=>{e.preventDefault();if(!rec)return toast('Select a customer to save the survey');const d=harvest(P,true);
 VIS[rec[COLS[0]]]={t:d['Date of verification']||today(),d};VST[rec[COLS[0]]]=today();save();toast('Survey saved – marked visited')}}
 /* ---------- Settings: Account Settings ---------- */
