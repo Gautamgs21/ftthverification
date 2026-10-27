@@ -2,12 +2,38 @@ import { MongoClient } from 'mongodb';
 import crypto from 'node:crypto';
 
 let client;
+let db;
+
 export async function getDb() {
-  if (!client) {
-    client = new MongoClient(process.env.MONGODB_URI, { maxPoolSize: 5 });
-    await client.connect();
+  // If we already have a database object, check if it's still alive
+  if (db) {
+    try {
+      // A quick "ping" to see if the connection is still open
+      await db.command({ ping: 1 });
+      return db;
+    } catch (e) {
+      // If it fails (Topology is closed), reset everything to reconnect
+      console.log("MongoDB connection closed. Reconnecting...");
+      client = null;
+      db = null;
+    }
   }
-  return client.db(process.env.MONGODB_DB || 'ftthdb');
+
+  // If we don't have a connection, create a new one
+  const newClient = new MongoClient(process.env.MONGODB_URI, { 
+    maxPoolSize: 5,
+    serverSelectionTimeoutMS: 5000 // Wait 5 seconds max for a connection
+  });
+  
+  try {
+    await newClient.connect();
+    client = newClient; // Only save it if it connects successfully!
+    db = client.db(process.env.MONGODB_DB || 'ftthdb');
+    return db;
+  } catch (error) {
+    console.error("Database connection failed:", error);
+    throw error; 
+  }
 }
 
 export function cors(req, res) {
@@ -17,6 +43,7 @@ export function cors(req, res) {
   if (req.method === 'OPTIONS') { res.status(204).end(); return true; }
   return false;
 }
+
 export const parseBody = req => (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {});
 
 /* ---- passwords (scrypt + salt) ---- */
@@ -56,6 +83,7 @@ export async function loadUsers(db) {
   }
   return d.list;
 }
+
 export const saveUsers = (db, list) =>
   db.collection('ftth_meta').replaceOne({ _id: 'users' }, { _id: 'users', list }, { upsert: true });
 
