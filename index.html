@@ -112,7 +112,13 @@ const payload=()=>({records:DB,visits:VIS,status:VST,schedules:SCH});
 async function saveLocal(){try{const d=await idb();d&&d.transaction('k','readwrite').objectStore('k').put(payload(),'s')}catch(e){}}
 async function loadLocal(){const d=await idb();if(!d)return;await new Promise(r=>{const q=d.transaction('k').objectStore('k').get('s');q.onsuccess=()=>{const v=q.result;if(v){DB=v.records||[];VIS=v.visits||{};VST=v.status||{};SCH=v.schedules||[]}r()};q.onerror=r})}
 const hdr=c=>({'Content-Type':'application/json',...(c.key?{Authorization:'Bearer '+c.key}:{})});
-async function pull(){const c=cfg();if(!c.api)return;try{const r=await fetch(c.api.replace(/\/$/,'')+'/data',{headers:hdr(c)});if(!r.ok)throw 0;const d=await r.json();DB=d.records||[];VIS=d.visits||{};VST=d.status||{};SCH=d.schedules||[];await saveLocal();toast('Loaded from MongoDB')}catch(e){toast('Database unreachable – using local copy')}}
+async function pull(show){const c=cfg();if(!c.api)return show?'✖ No API URL saved':'';
+try{const r=await fetch(c.api.replace(/\/$/,'')+'/data',{headers:hdr(c)}),t=await r.text();let d;
+try{d=JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status+' – reply was not JSON (wrong URL, or a Vercel login/protection page)')}
+if(!r.ok)throw new Error('HTTP '+r.status+' – '+(d.error||'error'));
+if(!(d.records||[]).length&&DB.length){save();toast('MongoDB is empty – uploading your local data');return '✔ Connected. Database was empty, so your '+DB.length+' local records are being uploaded.'}
+DB=d.records||[];VIS=d.visits||{};VST=d.status||{};SCH=d.schedules||[];await saveLocal();toast('Loaded from MongoDB');return '✔ Connected – '+DB.length+' records loaded'}
+catch(e){toast('Database unreachable – using local copy');return '✖ '+(e.message||e)}}
 let ptm;function save(){saveLocal();const c=cfg();if(!c.api)return;clearTimeout(ptm);ptm=setTimeout(()=>fetch(c.api.replace(/\/$/,'')+'/data',{method:'PUT',headers:hdr(c),body:JSON.stringify(payload())}).catch(()=>toast('Sync to MongoDB failed')),1500)}
 /* ---------- login ---------- */
 const hash=async s=>{try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(s)}};
@@ -266,13 +272,13 @@ ${us.map(x=>`<div class="vc"><div><b>${esc(x.u)}</b>${x.u==a.u?' <small>(you)</s
 <div class="sec">Database Connection (MongoDB API)</div>
 <div class="row"><label>API URL</label><input type="text" id="ap" placeholder="https://your-api.example.com" value="${esc(c.api||'')}"></div>
 <div class="row"><label>API key (optional)</label><input type="password" id="ak" value="${esc(c.key||'')}"></div>
-<div class="pb"><button class="btn p" id="adb">Save &amp; load from database</button></div></div>`;
+<div class="pb"><button class="btn p" id="adb">Save &amp; test connection</button></div><div id="dbmsg" style="padding:0 16px 14px;font-weight:600"></div></div>`;
 $('asv').onclick=async()=>{if(await hash($('ac').value)!=a.h)return toast('Current password is incorrect');const u=$('au').value.trim(),n=$('an').value;if(!u)return toast('Username required');if(us.some(x=>x.u==u&&x!==a))return toast('Username already exists');if(n&&n!=$('ar').value)return toast('New passwords do not match');
 a.u=u;if(n)a.h=await hash(n);putUsers(us);sessionStorage.setItem('ftth_user',u);toast('Account updated');rSet()};
 $('anu').onclick=async()=>{const u=$('nu').value.trim(),p=$('np').value;if(!u||!p)return toast('Enter username and password');if(us.some(x=>x.u==u))return toast('Username already exists');us.push({u,h:await hash(p)});putUsers(us);toast('User added');rSet()};
 $('v-set').onclick=e=>{const d=e.target.closest('[data-du]');if(d&&confirm('Remove user '+d.dataset.du+'?')){putUsers(us.filter(x=>x.u!=d.dataset.du));toast('User removed');rSet()}};
 $('alo').onclick=()=>{sessionStorage.removeItem('ftth_in');sessionStorage.removeItem('ftth_user');location.reload()};
-$('adb').onclick=async()=>{localStorage.setItem('ftth_cfg',JSON.stringify({api:$('ap').value.trim(),key:$('ak').value}));await pull();toast('Connection saved')}}
+$('adb').onclick=async()=>{localStorage.setItem('ftth_cfg',JSON.stringify({api:$('ap').value.trim(),key:$('ak').value}));$('dbmsg').textContent='Connecting…';$('dbmsg').textContent=await pull(true)}}
 /* ---------- boot ---------- */
 (async()=>{await loadLocal();sessionStorage.getItem('ftth_in')?enter():$('lg').classList.add('show')})();
 </script></body></html>
