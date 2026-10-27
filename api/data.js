@@ -1,5 +1,8 @@
-import { MongoClient } from 'mongodb';
+export const config = {
+  maxDuration: 60, // Allow up to 60 seconds
+};
 
+import { MongoClient } from 'mongodb';
 // This reuses the database connection for speed
 let cachedClient = null;
 
