@@ -6,13 +6,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{--n:#1a2b45;--g:#8b734b;--b:#f3ede4;--bg:#f1f5f9;--bd:#cbd5e1}
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--n);font:14px 'Segoe UI',system-ui,sans-serif}
-.serif,h1,h2,.nc span,.btn{font-family:Merriweather,Georgia,serif}
-header{position:sticky;top:0;z-index:20;background:#f1efe9;border-bottom:0}
-.w{max-width:1400px;margin:0 auto;padding:0 14px}
+h1,h2,.nc span,.btn{font-family:Merriweather,Georgia,serif}
+header{position:sticky;top:0;z-index:20;background:#f1efe9}
+.w{padding:0 12px}
 .top{display:flex;justify-content:space-between;align-items:center;padding:10px 0 6px;border-bottom:2px solid var(--n)}
 .top h1{margin:0;font-size:clamp(20px,4vw,30px)}
 .sq{width:36px;height:36px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--n);cursor:pointer}
@@ -25,147 +27,194 @@ header{position:sticky;top:0;z-index:20;background:#f1efe9;border-bottom:0}
 .btn{padding:9px 14px;border-radius:4px;border:1px solid var(--n);font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--n);text-transform:uppercase}
 .btn.p{background:var(--n);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
 .sm{font-family:'Segoe UI',sans-serif;text-transform:none;font-weight:600;padding:7px 11px}
-main{max-width:1400px;margin:14px auto;padding:0 14px}
+main{margin:12px 0;padding:0 12px}
 .pn{background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 3px #0001;margin-bottom:14px}
-.ph{padding:14px 16px;border-bottom:1px solid var(--bd)}
+.pn:fullscreen{overflow:auto;border-radius:0;margin:0}.pn:fullscreen .tw{max-height:calc(100vh - 170px)}
+.ph{padding:14px 16px;border-bottom:1px solid var(--bd)}.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .ph small{color:var(--g);font-weight:700;letter-spacing:1px;font-size:12px}.ph h2{margin:2px 0 0;font-size:clamp(20px,4vw,28px)}
 .pb{padding:14px 16px}
 .tb{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bd)}
 .tb .sp{margin-left:auto}
-.pill{display:inline-flex;align-items:center;border:1px solid var(--bd);border-radius:20px;overflow:hidden}
-.pill button{border:0;background:#fff;padding:6px 10px;cursor:pointer;color:var(--n)}.pill span{padding:0 6px;font-size:12px}
+.tbtn,.zg{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--bd);border-radius:4px;background:#fff;color:var(--n);font:600 13px 'Segoe UI',sans-serif;cursor:pointer}
+.tbtn:disabled{opacity:.45;cursor:not-allowed}.zg{padding:0}.zg button{border:0;background:none;color:var(--n);height:100%;padding:0 10px;cursor:pointer;font:inherit}.zg span{font-size:12px;padding:0 4px}
 .rel{position:relative}
 .pop{position:absolute;top:calc(100% + 9px);left:0;background:#fff;border:1px solid var(--bd);border-radius:6px;box-shadow:0 6px 18px #0003;padding:10px;z-index:15;min-width:250px;max-height:320px;overflow:auto;display:none}
 .pop.show{display:block}.pop:before{content:'';position:absolute;top:-6px;left:22px;width:10px;height:10px;background:#fff;border-left:1px solid var(--bd);border-top:1px solid var(--bd);transform:rotate(45deg)}
 .pop label,.ml label{display:flex;gap:8px;padding:4px 2px;font-size:13px;align-items:center}
-select,input[type=text],input[type=date],input[type=number],textarea{border:1px solid var(--bd);border-radius:4px;padding:7px 9px;font:inherit;background:#fff;color:var(--n);max-width:100%}
+select,input[type=text],input[type=password],input[type=date],textarea{border:1px solid var(--bd);border-radius:4px;padding:7px 9px;font:inherit;background:#fff;color:var(--n);max-width:100%}
+select.tbtn{padding:0 8px}
 .tw{overflow:auto;max-height:65vh}
 table{border-collapse:collapse;width:max-content;min-width:100%}
 th{position:sticky;top:0;background:var(--n);color:#fff;padding:8px 10px;text-align:left;font-size:12px;white-space:nowrap;cursor:pointer;z-index:2}
 th i{font-size:9px;opacity:.6;margin-left:4px}
-td{padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:13px;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
-tr:nth-child(even) td{background:#f8fafc}td:focus{outline:2px solid var(--g);background:#fff}
+td{padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:13px;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;user-select:none}
+tr:nth-child(even) td{background:#f8fafc}td:focus{outline:2px solid var(--g);background:#fff!important;user-select:text}
+tr.vis td{background:#f0fbf3!important}tr.vis td:first-child{box-shadow:inset 4px 0 #4ade80}
 .ft{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 16px;font-size:13px}
 .pg button{border:1px solid var(--bd);background:#fff;padding:5px 10px;margin:0 2px;border-radius:4px;cursor:pointer;color:var(--n)}.pg button.on{background:var(--n);color:#fff}
 .ov{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
-.ov.show{display:flex}.md{background:#fff;border-radius:8px;width:420px;max-width:100%;max-height:85vh;display:flex;flex-direction:column}
-.md .ml{overflow:auto;padding:10px 16px}.md h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--bd)}.md .mf{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--bd)}
+.ov.show{display:flex}#lg{background:var(--bg);z-index:80}
+.md{background:#fff;border-radius:8px;width:460px;max-width:100%;max-height:88vh;display:flex;flex-direction:column;position:relative;box-shadow:0 10px 40px #0005}
+.md .ml{overflow:auto;padding:10px 16px}.md h3{margin:0;padding:14px 44px 14px 16px;border-bottom:1px solid var(--bd);font-family:Merriweather,serif}.md .mf{padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--bd)}
+.x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:var(--n)}
+.lb{display:block;margin:12px 0 4px;font-size:12px;color:var(--g);letter-spacing:.5px}.cg{display:grid;grid-template-columns:1fr;max-height:200px;overflow:auto;border:1px solid var(--bd);border-radius:4px;padding:4px 8px}
+.rd label{display:inline-flex;gap:5px;margin-right:16px;align-items:center}
 .fl{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.fl b{font-size:12px;color:var(--g)}.fc{display:flex;flex-direction:column;gap:4px;flex:1 1 150px}.fc select{width:100%}
-.cv{max-width:720px;height:320px}
-.sec{background:var(--n);color:#fff;padding:8px 14px;font-weight:700;font-family:Merriweather,serif;font-size:14px}
+.cv{width:100%;height:clamp(300px,calc(100vh - 360px),640px)}
+.sec{background:var(--n);color:#fff;padding:8px 14px;font-weight:700;font-family:Merriweather,serif;font-size:14px;border-radius:0}
 .row{padding:10px 16px;border-bottom:1px solid #e2e8f0;display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:8px;align-items:start}
 .row>label{font-weight:600;font-size:13px}.o{display:inline-flex;gap:5px;margin:2px 14px 2px 0;align-items:center;font-weight:400}
-.row input[type=text],.row input[type=date],.row textarea{width:100%}.ro{background:#f8fafc;padding:7px 9px;border:1px dashed var(--bd);border-radius:4px;min-height:34px}
+.row input[type=text],.row input[type=password],.row input[type=date],.row textarea{width:100%}.ro{background:#f8fafc;padding:7px 9px;border:1px dashed var(--bd);border-radius:4px;min-height:34px}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.dg label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600}.dg input{width:100%}
 .empty{padding:30px;text-align:center;color:#64748b}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--n);color:#fff;padding:10px 18px;border-radius:6px;display:none;z-index:60}
+.vc{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
+.tabs{display:flex;gap:10px;flex-wrap:wrap}.tabs .btn.p{background:var(--n)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--n);color:#fff;padding:10px 18px;border-radius:6px;display:none;z-index:90}
+#cm{position:fixed;background:#fff;border:1px solid var(--bd);border-radius:6px;box-shadow:0 6px 18px #0003;z-index:70;display:none;min-width:200px;overflow:hidden}
+#cm div{padding:10px 14px;cursor:pointer;font-size:13px}#cm div:hover{background:var(--b)}
+.lc{width:360px;max-width:100%;background:#fff;border:1px solid var(--bd);border-radius:8px;padding:26px;box-shadow:0 6px 24px #0002}
+.lc h1{margin:0 0 4px;font-size:26px}.lc p{margin:0 0 16px;color:var(--g);font-size:12px;letter-spacing:1px}.lc input{width:100%;margin-bottom:10px}
 .view{display:none}.view.on{display:block}
-@media(max-width:700px){.nc{width:calc(33.3% - 10px);min-width:100px;height:78px}.cards{gap:10px;flex:1 1 100%}.acts{flex-direction:row;flex:1 1 100%}.acts .btn{flex:1}.row{grid-template-columns:1fr}.tb .sp{margin-left:0}}
-@media print{header,.tb,.ft{display:none}}
+@media(max-width:700px){.nc{width:calc(33.3% - 10px);min-width:90px;height:78px}.cards{gap:10px;flex:1 1 100%}.acts{flex-direction:row;flex:1 1 100%}.acts .btn{flex:1}.row{grid-template-columns:1fr}.tb .sp{margin-left:0}}
 </style></head><body>
+<div class="ov show" id="lg"><form class="lc" id="lf"><h1>FTTH Verification</h1><p>SIGN IN</p>
+<input type="text" id="lu" placeholder="Username" autocomplete="username"><input type="password" id="lp" placeholder="Password" autocomplete="current-password">
+<div id="le" style="color:#b91c1c;min-height:18px;font-size:13px"></div><button class="btn p" style="width:100%;margin-top:6px" type="submit">Login</button></form></div>
+<div id="app" hidden>
 <header><div class="w">
 <div class="top"><h1>FTTH Verification</h1><button class="sq" id="fs" title="Full screen"><i class="fa-solid fa-expand"></i></button></div>
-<div class="bar">
-<div class="cards" id="cards"></div>
-<div class="acts"><button class="btn p" id="ins">Insert DB</button><button class="btn" id="dl" disabled>Download DB</button><input type="file" id="file" accept=".xlsx,.xls" hidden></div>
-</div></div></header>
-<main>
-<section class="view" id="v-dash"></section>
-<section class="view" id="v-db"></section>
-<section class="view" id="v-visits"></section>
-<section class="view" id="v-pro"></section>
-<section class="view" id="v-set"></section>
-</main>
-<div class="ov" id="ov"><div class="md"><h3>Print / Save – choose columns</h3><div class="ml" id="ml"></div>
-<div class="mf"><button class="btn sm" id="mall">Select all</button><button class="btn sm" id="mx">Cancel</button><button class="btn p sm" id="mok">Download .xlsx</button></div></div></div>
-<div id="toast"></div>
+<div class="bar"><div class="cards" id="cards"></div>
+<div class="acts"><button class="btn p" id="ins">Update DB</button><button class="btn" id="dl" disabled>Download DB</button><input type="file" id="file" accept=".csv,.xlsx,.xls" hidden></div></div></div></header>
+<main><section class="view" id="v-dash"></section><section class="view" id="v-db"></section><section class="view" id="v-visits"></section><section class="view" id="v-pro"></section><section class="view" id="v-set"></section></main></div>
+<div class="ov" id="dm"><div class="md"><button class="x" id="dx" title="Close">&times;</button><h3>Download DB</h3><div class="ml">
+<b class="lb">DEFAULT DOWNLOAD LIST</b><div class="rd"><label><input type="radio" name="dlist" value="All" checked>All</label><label><input type="radio" name="dlist" value="Visited">Visited</label><label><input type="radio" name="dlist" value="Unvisited">Unvisited</label></div>
+<b class="lb">SELECT COLUMNS <a href="#" id="dall" style="float:right;color:var(--n)">Select / clear all</a></b><div class="cg" id="dcols"></div>
+<b class="lb">SAVE AS</b><div class="rd"><label><input type="radio" name="dfmt" value="PDF">PDF</label><label><input type="radio" name="dfmt" value="CSV" checked>CSV</label></div>
+</div><div class="mf"><button class="btn p" id="dok">Download</button></div></div></div>
+<div id="cm"></div><div id="toast"></div>
 <script>
 const COLS=["S.No.","Name of the State/UT","Circle name","District name","Block name","Block code","GP name","GP code","Village name","Village code","Village poulation range","Name of BNU","BNU Mobile number","BNU unique id","OLT IP from which ONT of the customer connected","Name of the customer","Customer unique id","Type of Customer (Publicinstitution/PrivateEnterprise/Household)","Customer address","ONT MAC address","Latitude of FTTH connection","Longitude of FTTH connection","Date of activation of connection","Current FTTH connection status (Active/Permanently closed)","If active Connection age at the last day of reporting quarter","Data usage of the Customer (GB)","Permanently closed, then Date of permanently closed"];
-const FMAP={"State/UT":"Name of the State/UT","Circle":"Circle name","District":"District name","Block":"Block name","Gram Panchayat":"GP name","Village":"Village name"};
+const FL=[['State','Name of the State/UT'],['Circle','Circle name'],['District','District name'],['Block','Block name'],['GP','GP name'],['Village','Village name']];
 const PAGES=[['dash','Dashboard','fa-gauge-high'],['db','Edit DB','fa-database'],['visits','My Visits','fa-chart-simple'],['pro','Proforma','fa-file-lines'],['set','Settings','fa-gear']];
 const TITLES={dash:'Dashboard',db:'Edit DB',visits:'My Visits',pro:'Proforma',set:'Settings'};
-const SUB={dash:'Overview',db:'Edit database',visits:'Completed surveys',pro:'Survey form A–N',set:'Preferences'};
-let DB=[],VIS={},cur='dash',chart=null,cp=null;
-let S={page:1,rows:25,col:null,dir:1,zoom:100,list:'Unvisited',hidden:new Set(),f:['','','','','',''],cfg:{bnu:'',off:'',des:''}};
+let DB=[],VIS={},VST={},SCH=[],cur='dash',chart=null,cp=null;
+const mk=()=>({page:1,rows:25,col:null,dir:1,zoom:100,list:'All',hidden:new Set(),sel:new Set()});
+const ST={db:mk(),plan:mk(),view:mk()};
+const S={f:['','','','','',''],vf:['','','','','',''],pf:['','','','','',''],pd:false,vtab:'up',vs:null,pdate:'',pname:'',draft:{}};
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2200)};
-const vis=r=>!!VIS[r[COLS[0]]];
-/* storage */
-const idb=()=>new Promise(r=>{const q=indexedDB.open('ftth',1);q.onupgradeneeded=()=>q.result.createObjectStore('k');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)});
-async function save(){try{const d=await idb();d&&d.transaction('k','readwrite').objectStore('k').put({DB,VIS,cfg:S.cfg,rows:S.rows},'s')}catch(e){}}
-async function load(){try{const d=await idb();if(!d)return;const q=d.transaction('k').objectStore('k').get('s');q.onsuccess=()=>{const v=q.result;if(v){DB=v.DB||[];VIS=v.VIS||{};S.cfg=v.cfg||S.cfg;S.rows=v.rows||25;}go(cur)}}catch(e){}}
-/* nav */
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const toast=m=>{const t=$('toast');(document.fullscreenElement||document.body).appendChild(t);t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2400)};
+const vis=r=>!!VST[r[COLS[0]]],idx=n=>DB.findIndex(r=>String(r[COLS[0]])==String(n));
+/* ---------- storage + MongoDB API ---------- */
+const cfg=()=>JSON.parse(localStorage.getItem('ftth_cfg')||'{}');
+const idb=()=>new Promise(r=>{try{const q=indexedDB.open('ftth',2);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains('k'))q.result.createObjectStore('k')};q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
+const payload=()=>({records:DB,visits:VIS,status:VST,schedules:SCH});
+async function saveLocal(){try{const d=await idb();d&&d.transaction('k','readwrite').objectStore('k').put(payload(),'s')}catch(e){}}
+async function loadLocal(){const d=await idb();if(!d)return;await new Promise(r=>{const q=d.transaction('k').objectStore('k').get('s');q.onsuccess=()=>{const v=q.result;if(v){DB=v.records||[];VIS=v.visits||{};VST=v.status||{};SCH=v.schedules||[]}r()};q.onerror=r})}
+const hdr=c=>({'Content-Type':'application/json',...(c.key?{Authorization:'Bearer '+c.key}:{})});
+async function pull(){const c=cfg();if(!c.api)return;try{const r=await fetch(c.api.replace(/\/$/,'')+'/data',{headers:hdr(c)});if(!r.ok)throw 0;const d=await r.json();DB=d.records||[];VIS=d.visits||{};VST=d.status||{};SCH=d.schedules||[];await saveLocal();toast('Loaded from MongoDB')}catch(e){toast('Database unreachable – using local copy')}}
+let ptm;function save(){saveLocal();const c=cfg();if(!c.api)return;clearTimeout(ptm);ptm=setTimeout(()=>fetch(c.api.replace(/\/$/,'')+'/data',{method:'PUT',headers:hdr(c),body:JSON.stringify(payload())}).catch(()=>toast('Sync to MongoDB failed')),1500)}
+/* ---------- login ---------- */
+const hash=async s=>{try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(s)}};
+const getUsers=async()=>{let u=JSON.parse(localStorage.getItem('ftth_users')||'null');if(!u){const o=JSON.parse(localStorage.getItem('ftth_acct')||'null');u=[o||{u:'admin',h:await hash('admin123')}];putUsers(u)}return u};
+const putUsers=u=>localStorage.setItem('ftth_users',JSON.stringify(u));
+$('lf').onsubmit=async e=>{e.preventDefault();const us=await getUsers(),n=$('lu').value.trim(),h=await hash($('lp').value);if(us.some(x=>x.u==n&&x.h==h)){sessionStorage.setItem('ftth_in','1');sessionStorage.setItem('ftth_user',n);$('lp').value='';$('le').textContent='';enter()}else $('le').textContent='Invalid username or password'};
+async function enter(){$('lg').classList.remove('show');$('app').hidden=false;await pull();go('dash')}
+/* ---------- nav ---------- */
 $('cards').innerHTML=PAGES.map(p=>`<button class="nc" data-p="${p[0]}"><i class="fa-solid ${p[2]}"></i><span>${p[1].toUpperCase()}</span></button>`).join('');
-$('cards').onclick=e=>{const b=e.target.closest('.nc');b&&go(b.dataset.p)};
-function head(){return `<div class="ph"><small>FTTH VERIFICATION</small><h2>${TITLES[cur]}</h2></div>`}
+$('cards').onclick=e=>{const b=e.target.closest('.nc');if(!b)return;if(b.dataset.p=='pro'){cp=null;S.draft={}}go(b.dataset.p)};
+const head=x=>`<div class="ph hd"><div><small>FTTH VERIFICATION</small><h2>${TITLES[cur]}</h2></div>${x||''}</div>`;
 function go(p){cur=p;document.querySelectorAll('.nc').forEach(b=>b.classList.toggle('on',b.dataset.p==p));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id=='v-'+p));
 ({dash:rDash,db:rDB,visits:rVisits,pro:rPro,set:rSet})[p]();$('dl').disabled=!DB.length}
-/* file in / out */
-$('ins').onclick=()=>$('file').click();
-$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const wb=XLSX.read(await f.arrayBuffer());
-DB=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});DB.forEach((r,i)=>{if(r[COLS[0]]===''||r[COLS[0]]==null)r[COLS[0]]=i+1});
-VIS={};const ps=wb.Sheets['Proforma'];if(ps)XLSX.utils.sheet_to_json(ps,{defval:''}).forEach(r=>{try{VIS[r['S.No.']]={t:r['Visit Date'],d:JSON.parse(r['Data'])}}catch(x){}});
-S.page=1;await save();go(cur);toast(DB.length+' records loaded')}catch(x){toast('Could not read file')}e.target.value=''};
-function dlFull(){if(!DB.length)return;const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DB,{header:COLS}),'Database');
-XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(Object.entries(VIS).map(([k,v])=>({'S.No.':k,'Visit Date':v.t,'Data':JSON.stringify(v.d)}))),'Proforma');XLSX.writeFile(wb,'FTTH_DB_'+new Date().toISOString().slice(0,10)+'.xlsx')}
-$('dl').onclick=dlFull;
 $('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();
-/* dashboard */
-const FL=[['State','Name of the State/UT'],['Circle','Circle name'],['District','District name'],['Block','Block name'],['GP','GP name'],['Village','Village name']];
-function rDash(){let rs=DB;
-const sel=FL.map(([n,c],i)=>{const op=[...new Set(rs.map(r=>r[c]).filter(x=>x!==''))].sort();if(S.f[i]&&!op.includes(S.f[i]))S.f[i]='';
-const h=`<div class="fc"><b>SELECT ${n.toUpperCase()}</b><select data-l="${i}"><option value="">All</option>${op.map(x=>`<option ${x==S.f[i]?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
-if(S.f[i])rs=rs.filter(r=>r[c]==S.f[i]);return h}).join('');
-const v=rs.filter(vis).length;
-$('v-dash').innerHTML=`<div class="pn">${head()}<div class="pb"><div class="fl">${sel}</div><div class="cv" style="margin-top:16px"><canvas id="ch"></canvas></div></div></div>`;
-$('v-dash').querySelectorAll('select').forEach(el=>el.onchange=()=>{const i=+el.dataset.l;S.f[i]=el.value;for(let j=i+1;j<6;j++)S.f[j]='';rDash()});
-chart&&chart.destroy();chart=new Chart($('ch'),{type:'bar',data:{labels:['Total Records','Visited','Pending'],datasets:[{data:[rs.length,v,rs.length-v],backgroundColor:['#1a2b45','#2f855a','#8b734b']}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}})}
-/* edit db */
-function list(){let a=DB.map((r,i)=>i);if(S.list=='Unvisited')a=a.filter(i=>!vis(DB[i]));else if(S.list=='Visited')a=a.filter(i=>vis(DB[i]));
-if(S.col!=null)a.sort((x,y)=>S.dir*String(DB[x][S.col]).localeCompare(String(DB[y][S.col]),undefined,{numeric:true}));return a}
-function rDB(){const L=list(),tp=Math.max(1,Math.ceil(L.length/S.rows));S.page=Math.min(S.page,tp);const st=(S.page-1)*S.rows,pg=L.slice(st,st+S.rows),vc=COLS.filter(c=>!S.hidden.has(c));
-let pb='';for(let p=Math.max(1,S.page-2);p<=Math.min(tp,Math.max(1,S.page-2)+4);p++)pb+=`<button class="${p==S.page?'on':''}" data-pg="${p}">${p}</button>`;
-$('v-db').innerHTML=`<div class="pn">${head()}
-<div class="tb"><button class="btn sm" id="upd"><i class="fa-solid fa-rotate"></i> Update DB</button>
-<div class="rel"><button class="btn sm" id="cb"><i class="fa-solid fa-table-columns"></i> Columns</button><div class="pop" id="pop">${COLS.map(c=>`<label><input type="checkbox" data-c="${esc(c)}" ${S.hidden.has(c)?'':'checked'}>${esc(c)}</label>`).join('')}</div></div>
-<div class="pill"><button id="zm">−</button><span>${S.zoom}%</span><button id="zp">+</button></div>
-<div class="rel pill" style="border-radius:4px"><button id="ps" class="sm"><i class="fa-solid fa-print"></i> Print/Save</button><button id="pc" style="border-left:1px solid var(--bd)"><i class="fa-solid fa-caret-down"></i></button>
-<div class="pop" id="pp" style="min-width:190px"><label style="cursor:pointer" id="pp1"><i class="fa-solid fa-file-excel"></i> Export selected columns</label><label style="cursor:pointer" id="pp2"><i class="fa-solid fa-print"></i> Print page</label></div></div>
-<button class="btn sm" id="fsb"><i class="fa-solid fa-expand"></i> Full Screen</button><button class="btn sm" id="fxb"><i class="fa-solid fa-compress"></i> Exit</button>
-<select class="sp" id="lt">${['Unvisited','Visited','All'].map(x=>`<option ${x==S.list?'selected':''}>${x}</option>`).join('')}</select></div>
-<div class="ph" style="padding:10px 16px"><b><i class="fa-solid fa-database"></i> EDIT DATABASE</b></div>
-<div class="tw">${DB.length?`<table style="font-size:${S.zoom}%;zoom:${S.zoom}%"><thead><tr><th>Action</th>${vc.map(c=>`<th data-s="${esc(c)}">${esc(c)}<i class="fa-solid fa-sort"></i></th>`).join('')}</tr></thead>
-<tbody>${pg.map(i=>`<tr><td><button class="btn sm" data-f="${i}">${vis(DB[i])?'Edit':'Survey'}</button></td>${vc.map(c=>`<td contenteditable data-i="${i}" data-k="${esc(c)}">${esc(DB[i][c])}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'<div class="empty"><i class="fa-solid fa-file-excel" style="font-size:34px"></i><p>No database loaded. Click <b>INSERT DB</b> to upload an .xlsx file.</p></div>'}</div>
-<div class="ft"><span>Showing ${L.length?st+1:0} to ${st+pg.length} of ${L.length} records</span><div class="pg"><button data-pg="${S.page-1}">Prev</button>${pb}<button data-pg="${S.page+1}">Next</button></div>
-<span>Rows per page <select id="rp">${[10,25,50,100].map(x=>`<option ${x==S.rows?'selected':''}>${x}</option>`).join('')}</select></span></div></div>`;
-const V=$('v-db');
-$('upd').onclick=async()=>{await save();rDB();toast('Database updated in browser memory')};
-$('cb').onclick=e=>{e.stopPropagation();$('pp').classList.remove('show');$('pop').classList.toggle('show')};
-$('pc').onclick=e=>{e.stopPropagation();$('pop').classList.remove('show');$('pp').classList.toggle('show')};
-$('pop').onclick=e=>e.stopPropagation();
-$('pop').onchange=e=>{const c=e.target.dataset.c;e.target.checked?S.hidden.delete(c):S.hidden.add(c);rDB();$('pop').classList.add('show')};
-$('zm').onclick=()=>{S.zoom=Math.max(50,S.zoom-10);rDB()};$('zp').onclick=()=>{S.zoom=Math.min(150,S.zoom+10);rDB()};
-$('ps').onclick=$('pp1').onclick=openM;$('pp2').onclick=()=>print();
-$('fsb').onclick=()=>document.documentElement.requestFullscreen?.();$('fxb').onclick=()=>document.fullscreenElement&&document.exitFullscreen();
-$('lt').onchange=e=>{S.list=e.target.value;S.page=1;rDB()};$('rp').onchange=e=>{S.rows=+e.target.value;S.page=1;save();rDB()};
-V.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{const p=+b.dataset.pg;if(p>=1&&p<=tp){S.page=p;rDB()}});
-V.querySelectorAll('[data-s]').forEach(h=>h.onclick=()=>{const c=h.dataset.s;S.dir=S.col==c?-S.dir:1;S.col=c;rDB()});
-V.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{cp=+b.dataset.f;go('pro')});
-V.querySelectorAll('td[contenteditable]').forEach(t=>t.onblur=()=>{const v=t.textContent;if(DB[t.dataset.i][t.dataset.k]!=v){DB[t.dataset.i][t.dataset.k]=v;save()}})}
-document.addEventListener('click',()=>document.querySelectorAll('.pop').forEach(p=>p.classList.remove('show')));
-/* print modal */
-function openM(){$('ml').innerHTML=COLS.map(c=>`<label><input type="checkbox" value="${esc(c)}" checked>${esc(c)}</label>`).join('');$('ov').classList.add('show')}
-$('mx').onclick=()=>$('ov').classList.remove('show');
-$('mall').onclick=()=>{const bs=$('ml').querySelectorAll('input'),a=[...bs].every(b=>b.checked);bs.forEach(b=>b.checked=!a)};
-$('mok').onclick=()=>{const cs=[...$('ml').querySelectorAll('input:checked')].map(b=>b.value);if(!cs.length||!DB.length)return toast('Nothing to export');
-const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DB.map(r=>Object.fromEntries(cs.map(c=>[c,r[c]]))),{header:cs}),'Export');XLSX.writeFile(wb,'FTTH_Export.xlsx');$('ov').classList.remove('show')};
-/* visits */
-function rVisits(){const rs=DB.filter(vis);$('v-visits').innerHTML=`<div class="pn">${head()}<div class="pb">Completed surveys: <b>${rs.length}</b> of ${DB.length}</div><div class="tw">${rs.length?`<table><thead><tr><th>S.No.</th><th>Customer</th><th>Village</th><th>Visit Date</th><th>Overall Impact</th><th></th></tr></thead><tbody>${rs.map(r=>{const v=VIS[r[COLS[0]]];return `<tr><td>${esc(r[COLS[0]])}</td><td>${esc(r["Name of the customer"])}</td><td>${esc(r["Village name"])}</td><td>${esc(v.t)}</td><td>${esc(v.d['Overall impact']||'')}</td><td><button class="btn sm" data-e="${DB.indexOf(r)}">Edit</button> <button class="btn sm" data-u="${r[COLS[0]]}">Unmark</button></td></tr>`}).join('')}</tbody></table>`:'<div class="empty">No visits recorded yet.</div>'}</div></div>`;
-$('v-visits').querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{cp=+b.dataset.e;go('pro')});
-$('v-visits').querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{delete VIS[b.dataset.u];save();rVisits()})}
-/* proforma */
+document.addEventListener('fullscreenchange',()=>document.querySelectorAll('.pn').forEach(h=>h._draw&&h._draw()));
+document.addEventListener('click',()=>{document.querySelectorAll('.pop').forEach(p=>p.classList.remove('show'));$('cm').style.display='none'});
+/* ---------- Update DB (CSV, skip duplicates) ---------- */
+$('ins').onclick=()=>$('file').click();
+$('file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+if(!rows.length)return toast('File is empty');if(!('Customer unique id' in rows[0]))return toast('Columns do not match the DB format');
+const key=r=>String(r['Customer unique id']||'').trim()||JSON.stringify(COLS.slice(1).map(c=>r[c]));
+const seen=new Set(DB.map(key)),used=new Set(DB.map(r=>String(r[COLS[0]])));let max=DB.reduce((m,r)=>Math.max(m,+r[COLS[0]]||0),0),add=0,skip=0;
+rows.forEach(r=>{const k=key(r);if(seen.has(k)){skip++;return}seen.add(k);const o={};COLS.forEach(c=>o[c]=r[c]??'');let s=String(o[COLS[0]]).trim();if(!s||used.has(s))s=String(++max);else max=Math.max(max,+s||max);o[COLS[0]]=s;used.add(s);DB.push(o);add++});
+save();go(cur);toast(`${add} added, ${skip} duplicate${skip==1?'':'s'} skipped`)}catch(x){toast('Could not read file')}};
+/* ---------- Download DB popup ---------- */
+const saveBlob=(b,n)=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)};
+$('dl').onclick=()=>{$('dcols').innerHTML=COLS.map(c=>`<label><input type="checkbox" value="${esc(c)}" checked>${esc(c)}</label>`).join('');$('dm').classList.add('show')};
+$('dx').onclick=()=>$('dm').classList.remove('show');$('dm').onclick=e=>{if(e.target.id=='dm')$('dm').classList.remove('show')};
+$('dall').onclick=e=>{e.preventDefault();const b=$('dcols').querySelectorAll('input'),a=[...b].every(x=>x.checked);b.forEach(x=>x.checked=!a)};
+$('dok').onclick=()=>{const L=document.querySelector('[name=dlist]:checked').value,F=document.querySelector('[name=dfmt]:checked').value,cols=[...$('dcols').querySelectorAll('input:checked')].map(b=>b.value);
+if(!cols.length)return toast('Select at least one column');const rs=DB.filter(r=>L=='All'||(L=='Visited')==vis(r)),nm='FTTH_DB_'+L+'_'+today();
+if(F=='CSV'){const csv=XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(rs.map(r=>Object.fromEntries(cols.map(c=>[c,r[c]]))),{header:cols}));saveBlob(new Blob(['\ufeff'+csv],{type:'text/csv'}),nm+'.csv')}
+else{const doc=new jspdf.jsPDF({orientation:'l',unit:'pt',format:cols.length>10?'a3':'a4'});doc.text('FTTH Verification – '+L+' ('+rs.length+')',30,28);doc.autoTable({startY:40,head:[cols],body:rs.map(r=>cols.map(c=>String(r[c]??''))),styles:{fontSize:6,cellPadding:2},headStyles:{fillColor:[26,43,69]}});doc.save(nm+'.pdf')}
+$('dm').classList.remove('show')};
+/* ---------- filters (as on Dashboard) ---------- */
+function fbar(f){let ix=DB.map((r,i)=>i);const html=FL.map(([n,c],i)=>{const op=[...new Set(ix.map(k=>DB[k][c]).filter(x=>x!==''))].sort();if(f[i]&&!op.includes(f[i]))f[i]='';
+const h=`<div class="fc"><b>SELECT ${n.toUpperCase()}</b><select data-l="${i}"><option value="">All</option>${op.map(x=>`<option ${x==f[i]?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;if(f[i])ix=ix.filter(k=>DB[k][c]==f[i]);return h}).join('');return{html,ix}}
+function fbind(f,h,cb){h.querySelectorAll('.fc select').forEach(el=>el.onchange=()=>{const i=+el.dataset.l;f[i]=el.value;for(let j=i+1;j<6;j++)f[j]='';cb()})}
+/* ---------- dashboard ---------- */
+function rDash(){const fb=fbar(S.f),rs=fb.ix.map(i=>DB[i]),v=rs.filter(vis).length;
+$('v-dash').innerHTML=`<div class="pn">${head()}<div class="pb"><div class="fl">${fb.html}</div><div class="cv" style="margin-top:16px"><canvas id="ch"></canvas></div></div></div>`;
+fbind(S.f,$('v-dash'),rDash);chart&&chart.destroy();chart=new Chart($('ch'),{type:'bar',data:{labels:['Total Records','Visited','Pending'],datasets:[{data:[rs.length,v,rs.length-v],backgroundColor:['#1a2b45','#2f855a','#8b734b']}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}})}
+/* ---------- reusable table (Edit DB / planner / visit list) ---------- */
+function setV(n,v){v?VST[n]=today():delete VST[n];save();toast(v?'Added to Visited':'Added to Non Visited')}
+function openRec(n){S.draft={};cp=idx(n);go('pro')}
+function T(host,st,base,o={}){
+const draw=()=>{let a=base();if(st.list=='Visited')a=a.filter(i=>vis(DB[i]));else if(st.list=='Unvisited')a=a.filter(i=>!vis(DB[i]));
+if(st.col!=null)a.sort((x,y)=>st.dir*String(DB[x][st.col]).localeCompare(String(DB[y][st.col]),undefined,{numeric:true}));
+const tp=Math.max(1,Math.ceil(a.length/st.rows));st.page=Math.min(st.page,tp);const s0=(st.page-1)*st.rows,pg=a.slice(s0,s0+st.rows),vc=COLS.filter(c=>!st.hidden.has(c)),fs=document.fullscreenElement==host,sa=pg.length&&pg.every(i=>st.sel.has(String(DB[i][COLS[0]])));
+let pb='';for(let p=Math.max(1,st.page-2);p<=Math.min(tp,Math.max(1,st.page-2)+4);p++)pb+=`<button class="${p==st.page?'on':''}" data-pg="${p}">${p}</button>`;
+host.innerHTML=`<div class="tb"><div class="rel"><button class="tbtn cb"><i class="fa-solid fa-table-columns"></i> Columns</button><div class="pop">${COLS.map(c=>`<label><input type="checkbox" data-c="${esc(c)}" ${st.hidden.has(c)?'':'checked'}>${esc(c)}</label>`).join('')}</div></div>
+<div class="zg"><button class="zm">−</button><span>${st.zoom}%</span><button class="zp">+</button></div>
+<button class="tbtn fsb"><i class="fa-solid ${fs?'fa-compress':'fa-expand'}"></i> ${fs?'Exit Full Screen':'Full Screen'}</button>
+<select class="tbtn sp lt">${['All','Visited','Unvisited'].map(x=>`<option ${x==st.list?'selected':''}>${x}</option>`).join('')}</select></div>
+<div class="ph" style="padding:10px 16px"><b><i class="fa-solid fa-database"></i> ${o.title||'EDIT DATABASE'}</b></div>
+<div class="tw">${a.length?`<table style="zoom:${st.zoom}%"><thead><tr>${o.sel?`<th><input type="checkbox" class="sa" ${sa?'checked':''}></th>`:''}<th>Action</th>${vc.map(c=>`<th data-s="${esc(c)}">${esc(c)}<i class="fa-solid fa-sort"></i></th>`).join('')}</tr></thead>
+<tbody>${pg.map(i=>{const r=DB[i],n=esc(r[COLS[0]]);return `<tr data-n="${n}" class="${vis(r)?'vis':''}">${o.sel?`<td><input type="checkbox" class="rc" ${st.sel.has(String(r[COLS[0]]))?'checked':''}></td>`:''}<td><button class="tbtn go" style="height:26px">${VIS[r[COLS[0]]]?'Edit':'Survey'}</button></td>${vc.map(c=>`<td data-k="${esc(c)}">${esc(r[c])}</td>`).join('')}</tr>`}).join('')}</tbody></table>`:'<div class="empty">'+(DB.length?'No records to show.':'No database loaded. Click <b>UPDATE DB</b> to upload a CSV file.')+'</div>'}</div>
+<div class="ft"><span>Showing ${a.length?s0+1:0} to ${s0+pg.length} of ${a.length} records</span><div class="pg"><button data-pg="${st.page-1}">Prev</button>${pb}<button data-pg="${st.page+1}">Next</button></div>
+<span>Rows per page <select class="rp">${[10,25,50,100].map(x=>`<option ${x==st.rows?'selected':''}>${x}</option>`).join('')}</select></span></div>`;
+host.onclick=e=>{const t=e.target;if(t.closest('.pop')){e.stopPropagation();return}
+if(t.closest('.cb')){e.stopPropagation();document.querySelectorAll('.pop').forEach(p=>p!=host.querySelector('.pop')&&p.classList.remove('show'));host.querySelector('.pop').classList.toggle('show');return}
+if(t.closest('.zm')){st.zoom=Math.max(50,st.zoom-10);return draw()}if(t.closest('.zp')){st.zoom=Math.min(150,st.zoom+10);return draw()}
+if(t.closest('.fsb')){document.fullscreenElement==host?document.exitFullscreen():host.requestFullscreen?.();return}
+const pgb=t.closest('[data-pg]');if(pgb){const p=+pgb.dataset.pg;if(p>=1&&p<=tp){st.page=p;draw()}return}
+const th=t.closest('[data-s]');if(th){const c=th.dataset.s;st.dir=st.col==c?-st.dir:1;st.col=c;return draw()}
+if(t.closest('.go')){openRec(t.closest('tr').dataset.n);return}
+const tr=t.closest('tbody tr');if(tr&&!t.closest('input,button')&&!t.isContentEditable){clearTimeout(host._ct);host._ct=setTimeout(()=>openRec(tr.dataset.n),260)}};
+host.onchange=e=>{const t=e.target;
+if(t.matches('.pop input')){t.checked?st.hidden.delete(t.dataset.c):st.hidden.add(t.dataset.c);draw();host.querySelector('.pop').classList.add('show')}
+else if(t.matches('.lt')){st.list=t.value;st.page=1;draw()}else if(t.matches('.rp')){st.rows=+t.value;st.page=1;draw()}
+else if(t.matches('.sa')){pg.forEach(i=>{const n=String(DB[i][COLS[0]]);t.checked?st.sel.add(n):st.sel.delete(n)});draw();o.onsel&&o.onsel()}
+else if(t.matches('.rc')){const n=t.closest('tr').dataset.n;t.checked?st.sel.add(n):st.sel.delete(n);o.onsel&&o.onsel()}};
+host.ondblclick=e=>{clearTimeout(host._ct);const td=e.target.closest('td[data-k]');if(!td)return;td.contentEditable=true;td.focus();td.onblur=()=>{td.contentEditable=false;const i=idx(td.parentNode.dataset.n);if(i>=0&&DB[i][td.dataset.k]!=td.textContent){DB[i][td.dataset.k]=td.textContent;save()}}};
+host.oncontextmenu=e=>{const tr=e.target.closest('tbody tr');if(!tr)return;e.preventDefault();const n=tr.dataset.n,cm=$('cm');(document.fullscreenElement||document.body).appendChild(cm);
+cm.innerHTML='<div data-v="1">✔ Add to Visited</div><div data-v="0">✖ Add to Non Visited</div>';cm.style.display='block';cm.style.left=Math.min(e.clientX,innerWidth-210)+'px';cm.style.top=Math.min(e.clientY,innerHeight-100)+'px';
+cm.onclick=ev=>{const d=ev.target.closest('[data-v]');if(d){setV(n,d.dataset.v=='1');draw()}}};
+host.ontouchstart=e=>{const tr=e.target.closest('tbody tr'),tw=host.querySelector('.tw');host._ts=tr?{n:tr.dataset.n,x:e.touches[0].clientX,y:e.touches[0].clientY,sl:tw.scrollLeft}:null};
+host.ontouchend=e=>{const s=host._ts;if(!s)return;host._ts=null;const c=e.changedTouches[0],dx=c.clientX-s.x,dy=c.clientY-s.y;if(Math.abs(dx)>80&&Math.abs(dy)<35&&host.querySelector('.tw').scrollLeft==s.sl){setV(s.n,dx>0);draw()}}};
+host._draw=draw;draw()}
+/* ---------- Edit DB ---------- */
+function rDB(){$('v-db').innerHTML=`<div class="pn">${head()}</div><div class="pn" id="dbt"></div>`;T($('dbt'),ST.db,()=>DB.map((r,i)=>i))}
+/* ---------- My Visits ---------- */
+function rVisits(){const V=$('v-visits'),td=today();
+if(S.vs){const s=SCH.find(x=>x.id==S.vs);if(!s){S.vs=null;return rVisits()}
+V.innerHTML=`<div class="pn">${head(`<button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div>`;
+$('bk').onclick=()=>{S.vs=null;rVisits()};T($('vt'),ST.view,()=>s.snos.map(idx).filter(i=>i>=0),{title:'SCHEDULED VISIT LIST'});return}
+const card=s=>`<div class="vc"><div><b>${esc(s.name)}</b><br><small>${s.date} · ${s.snos.length} places · ${s.snos.filter(n=>VST[n]).length} visited</small></div><div><button class="tbtn" data-o="${s.id}">Open</button> <button class="tbtn" data-d="${s.id}"><i class="fa-solid fa-trash"></i></button></div></div>`;
+const up=SCH.filter(s=>s.date>=td).sort((a,b)=>a.date.localeCompare(b.date)),pv=SCH.filter(s=>s.date<td).sort((a,b)=>b.date.localeCompare(a.date)),U=S.vtab=='up';
+if(!S.pdate)S.pdate=td;let fb;
+V.innerHTML=`<div class="pn">${head()}<div class="pb tabs"><button class="btn ${U?'p':''}" data-t="up">Upcoming Visits (${up.length})</button><button class="btn ${U?'':'p'}" data-t="pv">Previous Visits (${pv.length})</button></div></div>`+
+(U?`<div class="pn"><div class="sec">Upcoming Visits</div>${up.map(card).join('')||'<div class="empty">No upcoming visits scheduled.</div>'}</div>`:`<div class="pn"><div class="sec">Previous Visits</div>${pv.map(card).join('')||'<div class="empty">No previous visits.</div>'}</div>`);
+if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>VISIT DATE</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button></div></div></div><div class="pn" id="pt"></div>`);
+fbind(S.vf,V,rVisits);$('pdt').oninput=e=>S.pdate=e.target.value;$('pnm').oninput=e=>S.pname=e.target.value;
+T($('pt'),ST.plan,()=>fb.ix,{sel:1,title:'SELECT PLACES TO VISIT',onsel:()=>$('pcn').textContent=ST.plan.sel.size});
+$('psv').onclick=()=>{if(!ST.plan.sel.size)return toast('Select at least one row');if(!S.pdate)return toast('Pick a visit date');
+SCH.push({id:Date.now(),name:S.pname||S.vf.filter(Boolean).pop()||'Visit plan',date:S.pdate,snos:[...ST.plan.sel]});ST.plan.sel.clear();S.pname='';save();toast('Visit plan saved');rVisits()}}
+V.onclick=e=>{const t=e.target.closest('[data-t],[data-o],[data-d]');if(!t)return;if(t.dataset.t){S.vtab=t.dataset.t;rVisits()}else if(t.dataset.o){S.vs=+t.dataset.o;rVisits()}else if(t.dataset.d&&confirm('Delete this visit plan?')){SCH=SCH.filter(s=>s.id!=t.dataset.d);save();rVisits()}}}
+/* ---------- Proforma ---------- */
 const YN='Yes|No',RON='Regularly|Occasionally|Never',IDN='Increased|Decreased|No Change',IMP5='Significantly improved|Moderately improved|Slightly improved|No Change|Worsened';
-const SEC=[
-['C. Connection Details (editable)',[['Connection request date','d'],['BNU FTTH plan name','t'],['Plan speed (Mbps)  – TRAI test: myspeed.trai.gov.in','t'],['Connection activation status','r','Active|Inactive/Permanently Closed|Suspended'],['Connection currently in use','r',YN],['FTTH performance and service satisfactory','r',YN],['Customer contact number','t']]],
+const AF=[['A. Location & Administrative Details',[['District Name','District name'],['Block Name','Block name'],['Gram Panchayat (GP) Name','GP name'],['Village Name','Village name'],['Customer Unique ID','Customer unique id'],['Village Population Range','Village poulation range']]],['B. Customer Details',[['Customer Name (as per records)','Name of the customer'],['Customer Address (as per records)','Customer address'],['Customer Type',COLS[17]]]],['C. Connection Details',[['Date of Connection Activation',COLS[22]]]]];
+const SEC=[['',[['Connection request date','d'],['BNU FTTH plan name','t'],['Plan speed (Mbps) – TRAI test: myspeed.trai.gov.in','t'],['Connection activation status','r','Active|Inactive/Permanently Closed|Suspended'],['Connection currently in use','r',YN],['FTTH performance and service satisfactory','r',YN],['Customer contact number','t']]],
 ['D. Physical Verification',[['Customer/authorised person present','r',YN],['Proof of identity verified','r','Aadhaar|Voter ID|Office ID|Not Available'],['Address matches records','r',YN],['Equipment installed (ONT/Router/CPE)','r',YN],['Serial number / Asset ID','t']]],
 ['E. Usage & Service Validation',[['Approximate monthly usage','r','Low (<10 GB)|Medium (10–25 GB)|High (>25 GB)']]],
 ['F. Authenticity Assessment',[['Signs of irregularity (duplicate/fake/non-existent)','r',YN],['If yes, specify details','t']]],
@@ -177,33 +226,53 @@ const SEC=[
 ['L. Access to Government Services',[['Access after getting FTTH','r',IMP5]]],
 ['M. Overall Socio-Economic Impact',[['Overall impact','r','Very High|High|Moderate|Low|No Impact']]],
 ['N. Observation of Assigned Official (O/o CCA)',[['Comments on socio-economic impact','a'],['Geotagged photographic evidence collected','r',YN],['Name of BNU','t'],['Name of verifying officer','t'],['Type','r','VLE|SHG|ISP'],['Designation','t'],['Date of verification','d']]]];
-function rPro(){const o=DB.map((r,i)=>`<option value="${i}" ${i==cp?'selected':''}>${esc(r[COLS[0]])} – ${esc(r["Name of the customer"])}</option>`).join('');
-let h=`<div class="pn">${head()}<div class="pb fl"><b>CUSTOMER</b><select id="cs"><option value="">Select customer…</option>${o}</select></div></div>`;
-if(cp==null||!DB[cp]){$('v-pro').innerHTML=h+`<div class="pn"><div class="empty">${DB.length?'Select a customer above (or press Survey in Edit/DB).':'Insert a database first.'}</div></div>`;}
-else{const r=DB[cp],sv=VIS[r[COLS[0]]]?.d||{},A=(l,k)=>`<div class="row"><label>${l}</label><div class="ro">${esc(r[k])}</div></div>`;
-const dflt={'Name of BNU':S.cfg.bnu||r['Name of BNU'],'Name of verifying officer':S.cfg.off,'Designation':S.cfg.des,'Connection activation status':/closed/i.test(r[COLS[23]])?'Inactive/Permanently Closed':'Active','Date of verification':new Date().toISOString().slice(0,10)};
-let n=0;
-h+=`<div class="pn"><div class="sec">A. Location & Administrative Details</div>${A('District Name','District name')+A('Block Name','Block name')+A('Gram Panchayat (GP) Name','GP name')+A('Village Name','Village name')+A('Customer Unique ID','Customer unique id')+A('Village Population Range','Village poulation range')}
-<div class="sec">B. Customer Details</div>${A('Customer Name','Name of the customer')+A('Customer Address','Customer address')+A('Customer Type',COLS[17])}
-<div class="sec">C. Connection (from records)</div>${A('Date of Connection Activation',COLS[22])}
-<form id="pf">${SEC.map(([t,fs])=>`<div class="sec">${t}</div>`+fs.map(([l,ty,op])=>{const v=sv[l]??dflt[l]??'',k=esc(l);let c;
-if(ty=='r'){n++;c=op.split('|').map(x=>`<label class="o"><input type="radio" name="r${n}" value="${esc(x)}" ${v==x?'checked':''}>${esc(x)}</label>`).join('')}
+let rn=0;
+function fld(l,ty,op,v,ro){let c;v=v??'';
+if(ty=='r'){rn++;c=op.split('|').map(x=>`<label class="o"><input type="radio" name="r${rn}" value="${esc(x)}" ${v==x?'checked':''}>${esc(x)}</label>`).join('')}
 else if(ty=='c')c=op.split('|').map(x=>`<label class="o"><input type="checkbox" value="${esc(x)}" ${String(v).split(', ').includes(x)?'checked':''}>${esc(x)}</label>`).join('');
-else if(ty=='a')c=`<textarea rows="3">${esc(v)}</textarea>`;else c=`<input type="${ty=='d'?'date':'text'}" value="${esc(v)}">`;
-return `<div class="row"><label>${k}</label><div class="f" data-k="${k}" data-t="${ty}">${c}</div></div>`}).join('')).join('')}
-<div class="pb"><button type="submit" class="btn p">Save &amp; mark visited</button> <button type="button" class="btn" id="pcl">Clear</button></div></form></div>`;
-$('v-pro').innerHTML=h;
-$('pf').onsubmit=e=>{e.preventDefault();const d={};document.querySelectorAll('#pf .f').forEach(f=>{const t=f.dataset.t;d[f.dataset.k]=t=='r'?(f.querySelector(':checked')?.value||''):t=='c'?[...f.querySelectorAll(':checked')].map(x=>x.value).join(', '):f.querySelector('input,textarea').value});
-VIS[r[COLS[0]]]={t:d['Date of verification'],d};save();toast('Survey saved – marked visited');$('dl').disabled=false};
-$('pcl').onclick=()=>{delete VIS[r[COLS[0]]];save();rPro()}}
-const cs=$('cs');cs.onchange=e=>{cp=e.target.value===''?null:+e.target.value;rPro()}}
-/* settings */
-function rSet(){$('v-set').innerHTML=`<div class="pn">${head()}<div class="pb"><div class="row"><label>Default BNU name</label><input type="text" id="s1" value="${esc(S.cfg.bnu)}"></div>
-<div class="row"><label>Verifying officer</label><input type="text" id="s2" value="${esc(S.cfg.off)}"></div><div class="row"><label>Designation</label><input type="text" id="s3" value="${esc(S.cfg.des)}"></div>
-<div class="row"><label>Rows per page</label><select id="s4">${[10,25,50,100].map(x=>`<option ${x==S.rows?'selected':''}>${x}</option>`).join('')}</select></div>
-<div style="padding:10px 16px"><button class="btn p" id="ssv">Save settings</button> <button class="btn" id="sclr">Clear browser data</button></div>
-<p style="padding:0 16px;color:#64748b">Data lives in this browser only. Use <b>Download DB</b> to save an updated Excel file.</p></div></div>`;
-$('ssv').onclick=()=>{S.cfg={bnu:$('s1').value,off:$('s2').value,des:$('s3').value};S.rows=+$('s4').value;save();toast('Settings saved')};
-$('sclr').onclick=async()=>{if(!confirm('Clear all data stored in this browser? Download first if needed.'))return;DB=[];VIS={};cp=null;await save();go('db')}}
-load();go('dash');
+else if(ty=='a')c=`<textarea rows="3">${esc(v)}</textarea>`;else c=`<input type="${ty=='d'?'date':'text'}" value="${esc(v)}" ${ro?'readonly':''}>`;
+return `<div class="row"><label>${esc(l)}</label><div class="f" data-k="${esc(l)}" data-t="${ty}">${c}</div></div>`}
+const AFL=new Set(AF.flatMap(([t,fs])=>fs.map(x=>x[0]))),LOC=['District name','Block name','GP name','Village name','Village poulation range'];
+function harvest(P,all){const d={};P.querySelectorAll('#pf .f').forEach(f=>{const k=f.dataset.k,t=f.dataset.t;if(!all&&AFL.has(k))return;d[k]=t=='r'?(f.querySelector(':checked')?.value||''):t=='c'?[...f.querySelectorAll(':checked')].map(x=>x.value).join(', '):f.querySelector('input,textarea').value});return d}
+function rPro(){rn=0;const P=$('v-pro'),fb=fbar(S.pf),rec=cp!=null?DB[cp]:null,L=fb.ix.slice(0,800);if(cp!=null&&!L.includes(cp))L.unshift(cp);
+const anyF=S.pf.some(Boolean),auto=c=>{if(rec)return rec[c];if(!anyF||!LOC.includes(c))return '';const u=[...new Set(fb.ix.map(i=>DB[i][c]).filter(x=>x!==''))];return u.length==1?u[0]:''};
+const keep=()=>{S.draft=harvest(P)};
+let h=`<div class="pn">${head(`<button class="tbtn" id="vdb" ${rec?'':'disabled'}><i class="fa-solid fa-database"></i> ${S.pd?'Hide':'View'} DB details</button>`)}<div class="pb"><div class="fl">${fb.html}</div>
+<div class="fl" style="margin-top:12px"><b>CUSTOMER</b><select id="cs"><option value="">Select customer… (${fb.ix.length})</option>${L.map(i=>`<option value="${i}" ${i==cp?'selected':''}>${esc(DB[i][COLS[0]])} – ${esc(DB[i]['Name of the customer'])}</option>`).join('')}</select><button class="tbtn" id="pbl">Blank form</button></div></div></div>`;
+if(rec&&S.pd)h+=`<div class="pn"><div class="sec">Database Details (editable – changes are saved to the DB)</div><div class="pb dg">${COLS.map(c=>`<label>${esc(c)}<input type="text" data-c="${esc(c)}" value="${esc(rec[c])}" ${c==COLS[0]?'disabled':''}></label>`).join('')}</div></div>`;
+const sv=rec?VIS[rec[COLS[0]]]?.d||{}:{},dr=S.draft||{},dflt=rec?{'Connection activation status':/closed/i.test(rec[COLS[23]])?'Inactive/Permanently Closed':'Active','Date of verification':today()}:{};
+h+=`<div class="pn"><form id="pf">${AF.map(([t,fs])=>`<div class="sec">${t}</div>`+fs.map(([l,c])=>fld(l,'t','',auto(c),!!rec)).join('')).join('')}
+${SEC.map(([t,fs])=>(t?`<div class="sec">${t}</div>`:'')+fs.map(([l,ty,op])=>fld(l,ty,op,dr[l]??sv[l]??dflt[l])).join('')).join('')}
+<div class="pb"><button type="submit" class="btn p">Save &amp; mark visited</button> <button type="button" class="btn" id="prs">Reset</button></div></form></div>`;
+P.innerHTML=h;fbind(S.pf,P,()=>{keep();rPro()});
+$('cs').onchange=e=>{S.draft={};cp=e.target.value===''?null:+e.target.value;rPro()};$('pbl').onclick=()=>{S.draft={};cp=null;rPro()};$('prs').onclick=()=>{S.draft={};rPro()};
+$('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};
+P.querySelectorAll('.dg input').forEach(i=>i.onchange=()=>{DB[cp][i.dataset.c]=i.value;save();keep();toast('DB updated');rPro()});
+$('pf').onsubmit=e=>{e.preventDefault();if(!rec)return toast('Select a customer to save the survey');const d=harvest(P,true);
+VIS[rec[COLS[0]]]={t:d['Date of verification']||today(),d};VST[rec[COLS[0]]]=today();save();toast('Survey saved – marked visited')}}
+/* ---------- Settings: Account Settings ---------- */
+async function rSet(){const us=await getUsers(),me=sessionStorage.getItem('ftth_user')||us[0].u,a=us.find(x=>x.u==me)||us[0],c=cfg();
+$('v-set').innerHTML=`<div class="pn">${head()}<div class="sec">Account Settings – signed in as ${esc(a.u)}</div>
+<div class="row"><label>Username</label><input type="text" id="au" value="${esc(a.u)}"></div>
+<div class="row"><label>Current password</label><input type="password" id="ac" autocomplete="current-password"></div>
+<div class="row"><label>New password (leave blank to keep)</label><input type="password" id="an" autocomplete="new-password"></div>
+<div class="row"><label>Confirm new password</label><input type="password" id="ar" autocomplete="new-password"></div>
+<div class="pb"><button class="btn p" id="asv">Save account</button> <button class="btn" id="alo">Logout</button></div>
+<div class="sec">Users</div>
+${us.map(x=>`<div class="vc"><div><b>${esc(x.u)}</b>${x.u==a.u?' <small>(you)</small>':''}</div>${x.u==a.u?'':`<button class="tbtn" data-du="${esc(x.u)}"><i class="fa-solid fa-trash"></i> Remove</button>`}</div>`).join('')}
+<div class="row"><label>New username</label><input type="text" id="nu"></div>
+<div class="row"><label>New user password</label><input type="password" id="np" autocomplete="new-password"></div>
+<div class="pb"><button class="btn p" id="anu">Add user</button></div>
+<div class="sec">Database Connection (MongoDB API)</div>
+<div class="row"><label>API URL</label><input type="text" id="ap" placeholder="https://your-api.example.com" value="${esc(c.api||'')}"></div>
+<div class="row"><label>API key (optional)</label><input type="password" id="ak" value="${esc(c.key||'')}"></div>
+<div class="pb"><button class="btn p" id="adb">Save &amp; load from database</button></div></div>`;
+$('asv').onclick=async()=>{if(await hash($('ac').value)!=a.h)return toast('Current password is incorrect');const u=$('au').value.trim(),n=$('an').value;if(!u)return toast('Username required');if(us.some(x=>x.u==u&&x!==a))return toast('Username already exists');if(n&&n!=$('ar').value)return toast('New passwords do not match');
+a.u=u;if(n)a.h=await hash(n);putUsers(us);sessionStorage.setItem('ftth_user',u);toast('Account updated');rSet()};
+$('anu').onclick=async()=>{const u=$('nu').value.trim(),p=$('np').value;if(!u||!p)return toast('Enter username and password');if(us.some(x=>x.u==u))return toast('Username already exists');us.push({u,h:await hash(p)});putUsers(us);toast('User added');rSet()};
+$('v-set').onclick=e=>{const d=e.target.closest('[data-du]');if(d&&confirm('Remove user '+d.dataset.du+'?')){putUsers(us.filter(x=>x.u!=d.dataset.du));toast('User removed');rSet()}};
+$('alo').onclick=()=>{sessionStorage.removeItem('ftth_in');sessionStorage.removeItem('ftth_user');location.reload()};
+$('adb').onclick=async()=>{localStorage.setItem('ftth_cfg',JSON.stringify({api:$('ap').value.trim(),key:$('ak').value}));await pull();toast('Connection saved')}}
+/* ---------- boot ---------- */
+(async()=>{await loadLocal();sessionStorage.getItem('ftth_in')?enter():$('lg').classList.add('show')})();
 </script></body></html>
