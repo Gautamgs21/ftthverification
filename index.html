@@ -79,6 +79,11 @@ tr.vis td{background:#f0fbf3!important}tr.vis td:first-child{box-shadow:inset 4p
 .v-card{background:var(--b);border:1px solid var(--bd);border-radius:8px;padding:15px;text-align:center;box-shadow:0 1px 3px #0001}
 .v-card h3{margin:0 0 8px;font-size:12px;color:var(--g);letter-spacing:.5px}
 .v-card .v-num{margin:0;font-size:28px;font-weight:700;color:var(--n)}
+.hs{display:none;align-items:center;gap:10px;padding:6px 16px;border-bottom:1px solid var(--bd);font-size:12px;font-weight:600;color:var(--g)}
+.hs input{flex:1;width:100%;margin:0;padding:0;height:30px;accent-color:var(--n)}
+.bk{width:100%;min-height:110px;resize:vertical}
+.nf{margin-top:10px;font-size:12px;color:#b91c1c;word-break:break-all}
+@media (pointer:coarse){.tw{overflow-x:hidden;touch-action:pan-y}.hs.on{display:flex}}
 @media(max-width:1024px){.w,main{max-width:100%}}
 @media(max-width:700px){.nc{width:calc(33.3% - 10px);min-width:90px;height:78px}.cards{gap:10px;flex:1 1 100%}.acts{flex-direction:row;flex:1 1 100%}.acts .btn{flex:1}.row{grid-template-columns:1fr}.tb .sp{margin-left:0}}
 </style></head><body>
@@ -150,6 +155,7 @@ const head=x=>`<div class="ph hd"><div><small>FTTH VERIFICATION</small><h2>${TIT
 function go(p){cur=p;document.querySelectorAll('.nc').forEach(b=>b.classList.toggle('on',b.dataset.p==p));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id=='v-'+p));
 ({dash:rDash,db:rDB,visits:rVisits,pro:rPro,set:rSet})[p]();$('dl').disabled=!DB.length}
 $('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();
+window.addEventListener('resize',()=>document.querySelectorAll('.pn').forEach(h=>h._sync&&h._sync()));
 document.addEventListener('fullscreenchange',()=>document.querySelectorAll('.pn').forEach(h=>h._draw&&h._draw()));
 document.addEventListener('click',()=>{document.querySelectorAll('.pop').forEach(p=>p.classList.remove('show'));$('cm').style.display='none'});
 /* ---------- Update DB (CSV, skip duplicates) ---------- */
@@ -186,6 +192,8 @@ const nm=encodeURIComponent(r['Name of the customer']||'Customer'),g=`https://ww
 if(/iPhone|iPad|iPod/i.test(ua)){location.href=`maps://?daddr=${la},${lo}&dirflg=d`;setTimeout(()=>{if(!document.hidden)web()},1500)}
 else if(/Android/i.test(ua)){location.href=`geo:${la},${lo}?q=${la},${lo}(${nm})`;setTimeout(()=>{if(!document.hidden)web()},1500)}
 else web()}
+function bulkSel(sel,v){if(!sel.size)return toast('Select at least one row');let c=0;sel.forEach(n=>{n=String(n);if(v){if(!VST[n]){VST[n]=today();c++}}else if(VST[n]){delete VST[n];c++}});
+save();toast(`${sel.size} selected – ${c} changed to ${v?'Visited':'Unvisited'}`);rVisits()}
 function openRec(n){S.draft={};cp=idx(n);go('pro')}
 function T(host,st,base,o={}){
 const draw=()=>{let a=base();if(st.list=='Visited')a=a.filter(i=>vis(DB[i]));else if(st.list=='Unvisited')a=a.filter(i=>!vis(DB[i]));
@@ -197,10 +205,14 @@ host.innerHTML=`<div class="tb"><div class="rel"><button class="tbtn cb"><i clas
 <button class="tbtn fsb"><i class="fa-solid ${fs?'fa-compress':'fa-expand'}"></i> ${fs?'Exit Full Screen':'Full Screen'}</button>
 <select class="tbtn sp lt">${['All','Visited','Unvisited'].map(x=>`<option ${x==st.list?'selected':''}>${x}</option>`).join('')}</select></div>
 <div class="ph" style="padding:10px 16px"><b><i class="fa-solid fa-database"></i> ${o.title||'EDIT DATABASE'}</b></div>
+<div class="hs"><i class="fa-solid fa-arrows-left-right"></i><input type="range" class="hr" min="0" max="0" value="0" step="1" aria-label="Scroll table columns"><span>Slide to scroll</span></div>
 <div class="tw">${a.length?`<table style="zoom:${st.zoom}%"><thead><tr>${o.sel?`<th><input type="checkbox" class="sa" ${sa?'checked':''}></th>`:''}<th>Action</th>${vc.map(c=>`<th data-s="${esc(c)}">${esc(c)}<i class="fa-solid fa-sort"></i></th>`).join('')}</tr></thead>
 <tbody>${pg.map(i=>{const r=DB[i],n=esc(r[COLS[0]]);return `<tr data-n="${n}" class="${vis(r)?'vis':''}">${o.sel?`<td><input type="checkbox" class="rc" ${st.sel.has(String(r[COLS[0]]))?'checked':''}></td>`:''}<td><button class="tbtn go" style="height:26px">${VIS[r[COLS[0]]]?'Edit':'Survey'}</button></td>${vc.map(c=>`<td data-k="${esc(c)}">${esc(r[c])}</td>`).join('')}</tr>`}).join('')}</tbody></table>`:'<div class="empty">'+(DB.length?'No records to show.':'No database loaded. Click <b>UPDATE DB</b> to upload a CSV file.')+'</div>'}</div>
 <div class="ft"><span>Showing ${a.length?s0+1:0} to ${s0+pg.length} of ${a.length} records</span><div class="pg"><button data-pg="${st.page-1}">Prev</button>${pb}<button data-pg="${st.page+1}">Next</button></div>
 <span>Rows per page <select class="rp">${[10,25,50,100].map(x=>`<option ${x==st.rows?'selected':''}>${x}</option>`).join('')}</select></span></div>`;
+{const tw=host.querySelector('.tw'),hs=host.querySelector('.hs'),hr=host.querySelector('.hr');
+if(tw&&hr){const sync=()=>{const m=Math.max(0,tw.scrollWidth-tw.clientWidth);hr.max=m;hr.value=tw.scrollLeft;hs.classList.toggle('on',m>0)};
+hr.oninput=()=>{tw.scrollLeft=+hr.value};tw.onscroll=()=>{hr.value=tw.scrollLeft};host._sync=sync;sync();requestAnimationFrame(sync)}}
 host.onclick=e=>{const t=e.target;if(t.closest('.pop')){e.stopPropagation();return}
 if(t.closest('.cb')){e.stopPropagation();document.querySelectorAll('.pop').forEach(p=>p!=host.querySelector('.pop')&&p.classList.remove('show'));host.querySelector('.pop').classList.toggle('show');return}
 if(t.closest('.zm')){st.zoom=Math.max(50,st.zoom-10);return draw()}if(t.closest('.zp')){st.zoom=Math.min(150,st.zoom+10);return draw()}
@@ -222,13 +234,24 @@ host.ontouchstart=e=>{const tr=e.target.closest('tbody tr'),tw=host.querySelecto
 host.ontouchend=e=>{const s=host._ts;if(!s)return;host._ts=null;const c=e.changedTouches[0],dx=c.clientX-s.x,dy=c.clientY-s.y;if(Math.abs(dx)>80&&Math.abs(dy)<35&&host.querySelector('.tw').scrollLeft==s.sl){setV(s.n,dx>0);draw()}}};
 host._draw=draw;draw()}
 /* ---------- Edit DB ---------- */
-function rDB(){$('v-db').innerHTML=`<div class="pn">${head()}</div><div class="pn" id="dbt"></div>`;T($('dbt'),ST.db,()=>DB.map((r,i)=>i))}
+const parseIds=t=>[...new Set(String(t||'').split(/[\s,;|]+/).map(x=>x.trim()).filter(Boolean))];
+function bulkById(ids,v){const m=new Map();DB.forEach(r=>{const k=String(r['Customer unique id']??'').trim().toLowerCase();if(k){if(!m.has(k))m.set(k,[]);m.get(k).push(String(r[COLS[0]]))}});
+let ok=0,ch=0;const nf=[];ids.forEach(id=>{const a=m.get(id.toLowerCase());if(!a){nf.push(id);return}a.forEach(n=>{ok++;if(v){if(!VST[n]){VST[n]=today();ch++}}else if(VST[n]){delete VST[n];ch++}})});return{ok,ch,nf}}
+function rDB(){$('v-db').innerHTML=`<div class="pn">${head()}</div>
+<div class="pn"><div class="sec">Bulk Status Update by Customer Unique ID</div><div class="pb"><textarea id="bid" class="bk" placeholder="Paste Customer unique IDs here – one per line, or separated by commas / spaces"></textarea>
+<div class="fl" style="margin-top:10px"><button class="btn p sm" id="bidv"><i class="fa-solid fa-check"></i> Move to Visited</button><button class="btn sm" id="bidu"><i class="fa-solid fa-xmark"></i> Move to Unvisited</button><button class="btn sm" id="bidc">Clear</button><small id="bidn" style="color:var(--g);font-weight:700">0 IDs detected</small></div><div class="nf" id="bnf" hidden></div></div></div>
+<div class="pn" id="dbt"></div>`;T($('dbt'),ST.db,()=>DB.map((r,i)=>i));
+const ta=$('bid'),cnt=()=>{const n=parseIds(ta.value).length;$('bidn').textContent=n+' ID'+(n==1?'':'s')+' detected'};ta.oninput=cnt;
+const run=v=>{const ids=parseIds(ta.value);if(!ids.length)return toast('Paste at least one Customer unique id');if(!DB.length)return toast('No database loaded');
+const r=bulkById(ids,v);if(r.ch)save();$('dbt')._draw();const nf=$('bnf');nf.hidden=!r.nf.length;nf.innerHTML=r.nf.length?'Not found ('+r.nf.length+'): '+r.nf.map(esc).join(', '):'';
+toast(`${r.ok} record${r.ok==1?'':'s'} matched – ${r.ch} changed to ${v?'Visited':'Unvisited'}${r.nf.length?', '+r.nf.length+' ID'+(r.nf.length==1?'':'s')+' not found':''}`)};
+$('bidv').onclick=()=>run(true);$('bidu').onclick=()=>run(false);$('bidc').onclick=()=>{ta.value='';cnt();$('bnf').hidden=true}}
 /* ---------- My Visits ---------- */
 function rVisits(){const V=$('v-visits'),td=today();
 if(S.vs){const s=SCH.find(x=>x.id==S.vs);if(!s){S.vs=null;return rVisits()}
-V.innerHTML=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="bsa">Select all</button><button class="tbtn" id="bpdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="vpc">${ST.view.sel.size}</span>)</button><button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button></div>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div>`;
+V.innerHTML=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="bsa">Select all</button><button class="tbtn" id="bpdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="vpc">${ST.view.sel.size}</span>)</button><button class="tbtn" id="bvv"><i class="fa-solid fa-check"></i> Mark Visited</button><button class="tbtn" id="bvu"><i class="fa-solid fa-xmark"></i> Mark Unvisited</button><button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button></div>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div>`;
 $('bk').onclick=()=>{S.vs=null;rVisits()};const upd=()=>$('vpc').textContent=ST.view.sel.size;T($('vt'),ST.view,()=>s.snos.map(idx).filter(i=>i>=0),{title:'SCHEDULED VISIT LIST',sel:1,onsel:upd});
-$('bsa').onclick=()=>{const a=s.snos.map(String);ST.view.sel=ST.view.sel.size==a.length?new Set():new Set(a);$('vt')._draw();upd()};$('bpdf').onclick=()=>bulkPdf(ST.view.sel);return}
+$('bsa').onclick=()=>{const a=s.snos.map(String);ST.view.sel=ST.view.sel.size==a.length?new Set():new Set(a);$('vt')._draw();upd()};$('bpdf').onclick=()=>bulkPdf(ST.view.sel);$('bvv').onclick=()=>bulkSel(ST.view.sel,true);$('bvu').onclick=()=>bulkSel(ST.view.sel,false);return}
 const card=s=>`<div class="vc"><div><b>${esc(s.name)}</b><br><small>${s.date} · ${s.snos.length} places · ${s.snos.filter(n=>VST[n]).length} visited</small></div><div><button class="tbtn" data-o="${s.id}">Open</button> <button class="tbtn" data-d="${s.id}"><i class="fa-solid fa-trash"></i></button></div></div>`;
 const up=SCH.filter(s=>s.date>=td).sort((a,b)=>a.date.localeCompare(b.date)),pv=SCH.filter(s=>s.date<td).sort((a,b)=>b.date.localeCompare(a.date)),U=S.vtab=='up',D=S.vtab=='dir';
 if(!S.pdate)S.pdate=td;let fb;
@@ -288,10 +311,11 @@ fr.innerHTML=hit.length?hit.map(i=>{const r=DB[i],ok=isFinite(parseFloat(r[COLS[
 $('fq').oninput=find;find();
 fr.onclick=e=>{const d=e.target.closest('[data-dir]'),v=e.target.closest('[data-sv]');if(d)directions(DB[+d.dataset.dir]);else if(v){S.draft={};cp=+v.dataset.sv;go('pro')}}}
 
-if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>DATE OF VISIT</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button><button class="btn sm" id="ppdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="ppc">${ST.plan.sel.size}</span>)</button></div></div></div><div class="pn" id="pt"></div>`);
+if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>DATE OF VISIT</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button><button class="btn sm" id="ppdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="ppc">${ST.plan.sel.size}</span>)</button></div>
+<div class="fl" style="margin-top:12px"><b>BULK STATUS (SELECTED ROWS)</b><button class="btn sm" id="pbv"><i class="fa-solid fa-check"></i> Mark Visited</button><button class="btn sm" id="pbu"><i class="fa-solid fa-xmark"></i> Mark Unvisited</button></div></div></div><div class="pn" id="pt"></div>`);
 fbind(S.vf,V,rVisits);$('pdt').oninput=e=>S.pdate=e.target.value;$('pnm').oninput=e=>S.pname=e.target.value;
 T($('pt'),ST.plan,()=>fb.ix,{sel:1,title:'SELECT PLACES TO VISIT',onsel:()=>{$('pcn').textContent=ST.plan.sel.size;$('ppc').textContent=ST.plan.sel.size}});
-$('ppdf').onclick=()=>bulkPdf(ST.plan.sel);$('psv').onclick=()=>{if(!ST.plan.sel.size)return toast('Select at least one row');if(!S.pdate)return toast('Pick a visit date');
+$('ppdf').onclick=()=>bulkPdf(ST.plan.sel);$('pbv').onclick=()=>bulkSel(ST.plan.sel,true);$('pbu').onclick=()=>bulkSel(ST.plan.sel,false);$('psv').onclick=()=>{if(!ST.plan.sel.size)return toast('Select at least one row');if(!S.pdate)return toast('Pick a visit date');
 SCH.push({id:Date.now(),name:S.pname||S.vf.filter(Boolean).pop()||'Visit plan',date:S.pdate,snos:[...ST.plan.sel]});ST.plan.sel.clear();S.pname='';save();toast('Visit plan saved');rVisits()}}
 V.onclick=e=>{const t=e.target.closest('[data-t],[data-o],[data-d]');if(!t)return;if(t.dataset.t){S.vtab=t.dataset.t;rVisits()}else if(t.dataset.o){S.vs=+t.dataset.o;rVisits()}else if(t.dataset.d&&confirm('Delete this visit plan?')){SCH=SCH.filter(s=>s.id!=t.dataset.d);save();rVisits()}}}
 /* ---------- Proforma PDF (same layout as the official form) ---------- */
