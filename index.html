@@ -226,8 +226,9 @@ function rDB(){$('v-db').innerHTML=`<div class="pn">${head()}</div><div class="p
 /* ---------- My Visits ---------- */
 function rVisits(){const V=$('v-visits'),td=today();
 if(S.vs){const s=SCH.find(x=>x.id==S.vs);if(!s){S.vs=null;return rVisits()}
-V.innerHTML=`<div class="pn">${head(`<button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div>`;
-$('bk').onclick=()=>{S.vs=null;rVisits()};T($('vt'),ST.view,()=>s.snos.map(idx).filter(i=>i>=0),{title:'SCHEDULED VISIT LIST'});return}
+V.innerHTML=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="bsa">Select all</button><button class="tbtn" id="bpdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="vpc">${ST.view.sel.size}</span>)</button><button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button></div>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div>`;
+$('bk').onclick=()=>{S.vs=null;rVisits()};const upd=()=>$('vpc').textContent=ST.view.sel.size;T($('vt'),ST.view,()=>s.snos.map(idx).filter(i=>i>=0),{title:'SCHEDULED VISIT LIST',sel:1,onsel:upd});
+$('bsa').onclick=()=>{const a=s.snos.map(String);ST.view.sel=ST.view.sel.size==a.length?new Set():new Set(a);$('vt')._draw();upd()};$('bpdf').onclick=()=>bulkPdf(ST.view.sel);return}
 const card=s=>`<div class="vc"><div><b>${esc(s.name)}</b><br><small>${s.date} · ${s.snos.length} places · ${s.snos.filter(n=>VST[n]).length} visited</small></div><div><button class="tbtn" data-o="${s.id}">Open</button> <button class="tbtn" data-d="${s.id}"><i class="fa-solid fa-trash"></i></button></div></div>`;
 const up=SCH.filter(s=>s.date>=td).sort((a,b)=>a.date.localeCompare(b.date)),pv=SCH.filter(s=>s.date<td).sort((a,b)=>b.date.localeCompare(a.date)),U=S.vtab=='up',D=S.vtab=='dir';
 if(!S.pdate)S.pdate=td;let fb;
@@ -287,12 +288,119 @@ fr.innerHTML=hit.length?hit.map(i=>{const r=DB[i],ok=isFinite(parseFloat(r[COLS[
 $('fq').oninput=find;find();
 fr.onclick=e=>{const d=e.target.closest('[data-dir]'),v=e.target.closest('[data-sv]');if(d)directions(DB[+d.dataset.dir]);else if(v){S.draft={};cp=+v.dataset.sv;go('pro')}}}
 
-if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>DATE OF VISIT</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button></div></div></div><div class="pn" id="pt"></div>`);
+if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>DATE OF VISIT</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button><button class="btn sm" id="ppdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="ppc">${ST.plan.sel.size}</span>)</button></div></div></div><div class="pn" id="pt"></div>`);
 fbind(S.vf,V,rVisits);$('pdt').oninput=e=>S.pdate=e.target.value;$('pnm').oninput=e=>S.pname=e.target.value;
-T($('pt'),ST.plan,()=>fb.ix,{sel:1,title:'SELECT PLACES TO VISIT',onsel:()=>$('pcn').textContent=ST.plan.sel.size});
-$('psv').onclick=()=>{if(!ST.plan.sel.size)return toast('Select at least one row');if(!S.pdate)return toast('Pick a visit date');
+T($('pt'),ST.plan,()=>fb.ix,{sel:1,title:'SELECT PLACES TO VISIT',onsel:()=>{$('pcn').textContent=ST.plan.sel.size;$('ppc').textContent=ST.plan.sel.size}});
+$('ppdf').onclick=()=>bulkPdf(ST.plan.sel);$('psv').onclick=()=>{if(!ST.plan.sel.size)return toast('Select at least one row');if(!S.pdate)return toast('Pick a visit date');
 SCH.push({id:Date.now(),name:S.pname||S.vf.filter(Boolean).pop()||'Visit plan',date:S.pdate,snos:[...ST.plan.sel]});ST.plan.sel.clear();S.pname='';save();toast('Visit plan saved');rVisits()}}
 V.onclick=e=>{const t=e.target.closest('[data-t],[data-o],[data-d]');if(!t)return;if(t.dataset.t){S.vtab=t.dataset.t;rVisits()}else if(t.dataset.o){S.vs=+t.dataset.o;rVisits()}else if(t.dataset.d&&confirm('Delete this visit plan?')){SCH=SCH.filter(s=>s.id!=t.dataset.d);save();rVisits()}}}
+/* ---------- Proforma PDF (same layout as the official form) ---------- */
+const INK=[10,40,110],HD=[31,78,121];
+const fmtD=v=>/^\d{4}-\d\d-\d\d$/.test(String(v))?String(v).split('-').reverse().join('-'):String(v??'');
+const popIdx=v=>{const t=String(v||'').toLowerCase().replace(/[–—]/g,'-').replace(/to/g,'-').replace(/[\s,]/g,'');if(!t)return -1;if(/^(below|under|less|<)/.test(t)||t=='0-500')return 0;if(/^500-1000/.test(t))return 1;if(/^1001-2000/.test(t))return 2;if(/above|more|\+/.test(t)||/^3000/.test(t))return 3;return -1};
+const YNo=['Yes','No'],RO3=['Regularly','Occasionally','Never'],ID3=['Increased','Decreased','No Change'],IM5=['Significantly improved','Moderately improved','|','Slightly improved','No Change','Worsened'];
+const PM=[
+['S','A. Location & Administrative Details'],
+['L',1,'District Name:','District name'],['L',2,'Block Name:','Block name'],['L',3,'Gram Panchayat (GP) Name:','GP name'],['L',4,'Village Name:','Village name'],['L',5,'Customer Unique ID:','Customer unique id'],
+['O',6,'Village Population Range:','Village poulation range',['Below 500','500–1,000','1,001–2,000','Above 3,000'],'pop'],
+['S','B. Customer Details'],
+['L',7,'Customer Name (as per records):','Name of the customer'],['L',8,'Customer Address (as per records):','Customer address'],['L',9,'Customer Type:',COLS[17]],['L',10,'Customer Contact Number (if available):','Customer contact number'],
+['S','C. Connection Details'],
+['L',11,'Connection Request Date:','Connection request date'],['L',12,'Date of Connection Activation:',COLS[22]],['L',13,'BNU FTTH Plan Name:','BNU FTTH plan name'],['L',14,'Plan Speed (Mbps):','Plan speed (Mbps) – TRAI test: myspeed.trai.gov.in'],
+['N','TRAI speed test: https://myspeed.trai.gov.in/'],
+['O',15,'Connection Activation Status (as per records):','Connection activation status',['Active','Inactive/Permanently Closed','Suspended']],
+['O',16,'Connection Currently in Use (customer\ninteraction):','Connection currently in use',YNo],
+['O',17,'FTTH performance and service satisfactory:','FTTH performance and service satisfactory',YNo],
+['S','D. Physical Verification'],
+['O',18,'Customer/authorised person present:','Customer/authorised person present',YNo],
+['O',19,'Proof of Identity Verified:','Proof of identity verified',['Aadhaar','Voter ID','Office ID','Not Available']],
+['O',20,'Address matches records:','Address matches records',YNo],
+['O',21,'Equipment installed at site (ONT/Router/CPE):','Equipment installed (ONT/Router/CPE)',YNo],
+['L',22,'Serial Number / Asset ID (if available):','Serial number / Asset ID'],
+['S','E. Usage & Service Validation'],
+['O',23,'Approximate Monthly Usage:','Approximate monthly usage',['Low (<10 GB)','Medium (10–25 GB)','High (>25 GB)']],
+['S','F. Authenticity Assessment'],
+['O',24,'Signs of irregularity in connection\n(duplicate/fake/non-existent connection):','Signs of irregularity (duplicate/fake/non-existent)',YNo],
+['L',25,'If yes, specify details:','If yes, specify details'],
+['S','G. Economic Outcomes & Expenses After FTTH Connection'],
+['O',26,'Change in household income:','Change in household income',ID3],
+['O',27,'Internet-based income sources (select all):','Internet-based income sources',['E-commerce','Online job','Freelancing/Gig work','Digital payments received','Remittances',['Other:________','Other']],'m'],
+['O',28,'Started new online business/freelance work:','Started new online business/freelance work',YNo],
+['O',29,'Reduced household expenses due to FTTH:','Reduced household expenses due to FTTH',YNo],
+['O',30,'Change in monthly travel due to online\nservices:','Change in monthly travel due to online services',ID3],
+['O',31,'Use of e-commerce platforms:','Use of e-commerce platforms',RO3],
+['S','H. Education & Digital Skills'],
+['O',32,'Digital skills level:','Digital skills level',['Beginner','Basic','Intermediate','Advanced']],
+['PB'],
+['L',33,'Family members using online education:','Family members using online education'],
+['O',34,'Impact on education:','Impact on education',['Improved','No Change','Worsened','N/A']],
+['O',35,'Online learning/skill development (select all):','Online learning/skill development',['Online classes','Competitive exams','|','Vocational skills',['Other: __________','Other']],'m'],
+['S','I. Healthcare & E-Governance'],
+['L',36,'Teleconsultations in last 12 months:','Teleconsultations in last 12 months'],
+['O',37,'Online health services/medicine orders:','Online health services/medicine orders',RO3],
+['O',38,'Government e-services usage:','Government e-services usage',RO3],
+['O',39,'Services used (select all):','Services used',['Aadhaar/PAN','Certificates','Land records','|','Pension/Welfare','Digital payments',['Other__________','Other']],'m'],
+['S','J. Agricultural Impact (if applicable)'],
+['O',40,'Household engaged in agriculture:','Household engaged in agriculture',YNo],
+['O',41,'FTTH benefit to farming:','FTTH benefit to farming',['Significant','Moderate','No Change','N/A']],
+['O',42,'Benefits (select all):','Farming benefits',['Market prices','Weather','Soil/Crop advice','Fertilizer information','Government schemes/subsidies'],'m'],
+['S','K. Digital Inclusion & Quality of Life'],
+['O',43,'Entertainment:','Entertainment',IM5],
+['O',44,'Communication with family/friends:','Communication with family/friends',['Improved significantly','Improved moderately','|','Improved slightly','No Change']],
+['O',45,'Family members newly using internet:','Family members newly using internet (number, 0 = none)',null,'num'],
+['O',46,'Women newly using internet:','Women newly using internet (number, 0 = none)',null,'num'],
+['O',47,'Senior citizens using internet:','Senior citizens using internet',YNo],
+['O',48,'Major benefits of FTTH (select all):','Major benefits of FTTH',['Education','Income/Employment','Business','|','Healthcare','Time/Cost savings','Digital payments','|','Entertainment','Social connectivity'],'m'],
+['LH','Access after getting FTTH',IM5],
+['S','M. Overall Socio-Economic Impact of FTTH'],
+['O',49,'Overall impact:','Overall impact',['Very High','High','Moderate','Low','No Impact']],
+['S','N. Observation of Assigned Official (O/o CCA)'],
+['C',50,'Comments on socio-economic impact:','Comments on socio-economic impact'],
+['O',51,'Geotagged photographic evidence collected:','Geotagged photographic evidence collected',YNo],
+['F']];
+function drawForm(doc,rec,d){
+const ML=34.56,VX=262,TX=268.6,RX=557.8,LH=11.1;let y=54.3,pg=1;
+const g=k=>{const v=d&&d[k];return v!==undefined&&v!==''?v:(rec&&rec[k]!=null?rec[k]:'')};
+const val=k=>{if(k=='Connection activation status'){const v=d&&d[k];if(v)return v;return rec?(/closed/i.test(rec[COLS[23]])?'Inactive/Permanently Closed':'Active'):''}return fmtD(g(k))};
+const clean=t=>String(t??'').replace(/[^\n\x20-\x7E\u00A0-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g,'?');
+const txt=(t,x,b,w,sz,col,st)=>{t=clean(t);doc.setFont('helvetica',st||'normal');sz=sz||9;doc.setFontSize(sz);doc.setTextColor(...(col||[0,0,0]));
+if(w){while(doc.getTextWidth(t)>w&&sz>5.5){sz-=.5;doc.setFontSize(sz)}if(doc.getTextWidth(t)>w){while(t.length>3&&doc.getTextWidth(t+'…')>w)t=t.slice(0,-1);t+='…'}}doc.text(t,x,b)};
+const foot=()=>{doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(60,60,60);doc.text('FTTH Connection Verification Proforma  |  Page '+pg,297.6,824,{align:'center'})};
+const brk=()=>{foot();doc.addPage();pg++;y=77};
+const need=h=>{if(y+h>795)brk()};
+const lab=(n,t)=>{doc.setFont('helvetica','normal');doc.setFontSize(9);return doc.splitTextToSize(clean(n+'. '+t),222)};
+const drawLab=(ls,top)=>ls.forEach((l,i)=>txt(l,ML,top+8.6+i*LH,0,9));
+const lh=ls=>ls.length>1?ls.length*LH+5:0;
+const box=(x,b,on)=>{doc.setDrawColor(0);doc.setLineWidth(.6);doc.rect(x,b-6.6,7,7);if(on){doc.setDrawColor(...INK);doc.setLineWidth(1.2);doc.line(x+1.3,b-2.7,x+3,b-.9);doc.line(x+3,b-.9,x+6.3,b-5.4)}};
+const opt=(t,x,b,on)=>{box(x,b,on);txt(t,x+10.2,b,0,9)};
+doc.setFont('helvetica','bold');doc.setFontSize(16.5);doc.setTextColor(...HD);doc.text('FTTH CONNECTION VERIFICATION PROFORMA',297.66,46.5,{align:'center'});
+PM.forEach(it=>{const t=it[0];
+if(t=='S'){need(40);y+=2.2;txt(it[1],ML+5,y+10.6,0,10.5,HD,'bold');doc.setDrawColor(143,170,196);doc.setLineWidth(.6);doc.line(ML,y+15.2,RX+2,y+15.2);y+=19}
+else if(t=='PB'){brk()}
+else if(t=='N'){txt(it[1],ML+11,y+4,0,8,[90,90,90],'italic');y+=11}
+else if(t=='L'){const ls=lab(it[1],it[2]),h=Math.max(15,lh(ls));need(h);drawLab(ls,y);txt(val(it[3]),TX+1,y+8.2,RX-TX-2,9,INK);doc.setDrawColor(0);doc.setLineWidth(.5);doc.line(TX,y+9.9,RX,y+9.9);y+=h}
+else if(t=='O'){const ls=lab(it[1],it[2]),mode=it[5];let v=mode=='pop'?popIdx(g(it[3])):val(it[3]),opts=it[4];
+if(mode=='num'){const s=String(v).trim(),n=parseInt(s),yes=/^y/i.test(s)||n>0,no=/^n/i.test(s)||(s!==''&&n===0);opts=[['Yes (Number: '+(n>0?n:'_____')+')','Y'],'No'];v=yes?'Y':no?'No':''}
+doc.setFont('helvetica','normal');doc.setFontSize(9);let x=VX,r=0;const pl=[];
+opts.forEach(o=>{if(o==='|'){x=VX;r++;return}const p=Array.isArray(o)?o[0]:o,w=doc.getTextWidth(clean(p))+10.2;if(x>VX&&x+w>RX+3){x=VX;r++}pl.push([p,Array.isArray(o)?o[1]:o,x,r]);x+=w+11});
+const oh=(r+1)*16.5,l=lh(ls),h=Math.max(oh,l);need(h);drawLab(ls,y);const off=(h-oh)/2;
+pl.forEach(([p,ov,px,pr],i)=>{const on=mode=='pop'?v===i:mode=='m'?String(v).split(/,\s*/).includes(ov):String(v).trim().toLowerCase()==String(ov).toLowerCase();opt(p,px,y+off+8.6+pr*16.5,on)});y+=h}
+else if(t=='LH'){need(40);y+=2.2;txt('L. Access to Government Services',ML+5,y+11,0,10.5,HD,'bold');txt('After Getting FTTH Connection',ML+14,y+24,0,10.5,HD,'bold');
+const v=val(it[1]);let x=VX+9,r=0;doc.setFont('helvetica','normal');doc.setFontSize(9);
+it[2].forEach(o=>{if(o==='|'){x=VX+9;r++;return}const w=doc.getTextWidth(o)+10.2;if(x>VX+9&&x+w>RX+3){x=VX+9;r++}opt(o,x,y+9.6+r*16.5,String(v)==o);x+=w+11});y+=38}
+else if(t=='C'){const ls=lab(it[1],it[2]);need(75);drawLab(ls,y);y+=16;const lines=String(val(it[3])).split(/\n/).flatMap(s=>{doc.setFont('helvetica','normal');doc.setFontSize(9);return doc.splitTextToSize(clean(s),508)}).slice(0,4),n=Math.max(1,lines.length);
+for(let i=0;i<n;i++){if(lines[i])txt(lines[i],ML+8,y+14,508,9,INK);doc.setDrawColor(0);doc.setLineWidth(.5);doc.line(ML+5,y+16,556,y+16);y+=19.5}}
+else if(t=='F'){const b1=y+33+8.6+16.5,b2=b1+16.5,b3=b2+24.7;
+const fl=(l,x,b,ex,k)=>{txt(l,x,b,0,9);doc.setFont('helvetica','normal');doc.setFontSize(9);const lx=x+doc.getTextWidth(l)+2;doc.setDrawColor(0);doc.setLineWidth(.5);doc.line(lx,b+1.4,ex,b+1.4);const v=val(k);if(v)txt(v,lx+2,b-.4,ex-lx-3,9,INK)};
+fl('Name of BNU:',ML,b1,247,'Name of BNU');fl('Name of Verifying Officer:',297,b1,521,'Name of verifying officer');
+txt('Type:',ML,b2,0,9);let x=ML+27;const ty=String(val('Type'));['VLE','SHG','ISP'].forEach(o=>{opt(o,x,b2,ty==o);x+=doc.getTextWidth(o)+21});
+fl('Designation:',297,b2,523,'Designation');fl('Date:',ML,b3,245,'Date of verification');fl('Date of Verification:',297,b3+6.2,521,'Date of verification');y=b3+14}});
+foot()}
+function makePdf(list,print,name){const doc=new jspdf.jsPDF({unit:'pt',format:'a4'});list.forEach((it,i)=>{if(i)doc.addPage();drawForm(doc,it.rec,it.d)});
+if(print){doc.autoPrint();const u=doc.output('bloburl');if(!window.open(u,'_blank'))doc.save(name)}else doc.save(name)}
+function bulkPdf(sel){const l=[...sel].map(n=>{const i=idx(n);return i>=0?{rec:DB[i],d:VIS[n]?.d||{}}:null}).filter(Boolean);if(!l.length)return toast('Select at least one row');
+toast('Preparing PDF of '+l.length+' record'+(l.length>1?'s':'')+'…');setTimeout(()=>makePdf(l,false,`FTTH_Proforma_${l.length}_${today()}.pdf`),60)}
+
 /* ---------- Proforma ---------- */
 const YN='Yes|No',RON='Regularly|Occasionally|Never',IDN='Increased|Decreased|No Change',IMP5='Significantly improved|Moderately improved|Slightly improved|No Change|Worsened';
 const AF=[['A. Location & Administrative Details',[['District Name','District name'],['Block Name','Block name'],['Gram Panchayat (GP) Name','GP name'],['Village Name','Village name'],['Customer Unique ID','Customer unique id'],['Village Population Range','Village poulation range']]],['B. Customer Details',[['Customer Name (as per records)','Name of the customer'],['Customer Address (as per records)','Customer address'],['Customer Type',COLS[17]]]],['C. Connection Details',[['Date of Connection Activation',COLS[22]]]]];
@@ -320,7 +428,7 @@ function rPro(){rn=0;const P=$('v-pro'),fb=fbar(S.pf),rec=cp!=null?DB[cp]:null,L
 const anyF=S.pf.some(Boolean),auto=c=>{if(rec)return rec[c];if(!anyF||!LOC.includes(c))return '';const u=[...new Set(fb.ix.map(i=>DB[i][c]).filter(x=>x!==''))];return u.length==1?u[0]:''};
 const keep=()=>{S.draft=harvest(P)};
 const ll=rec&&isFinite(parseFloat(rec[COLS[20]]))&&isFinite(parseFloat(rec[COLS[21]]));
-let h=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="dir" ${ll?'':'disabled'}><i class="fa-solid fa-location-arrow"></i> Directions</button><button class="tbtn" id="vdb" ${rec?'':'disabled'}><i class="fa-solid fa-database"></i> ${S.pd?'Hide':'View'} DB details</button></div>`)}<div class="pb"><div class="fl">${fb.html}</div>
+let h=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="dir" ${ll?'':'disabled'}><i class="fa-solid fa-location-arrow"></i> Directions</button><button class="tbtn" id="pr" title="Print this proforma as a PDF"><i class="fa-solid fa-print"></i> Print</button><button class="tbtn" id="vdb" ${rec?'':'disabled'}><i class="fa-solid fa-database"></i> ${S.pd?'Hide':'View'} DB details</button></div>`)}<div class="pb"><div class="fl">${fb.html}</div>
 <div class="fl" style="margin-top:12px"><b>CUSTOMER</b><select id="cs"><option value="">Select customer… (${fb.ix.length})</option>${L.map(i=>`<option value="${i}" ${i==cp?'selected':''}>${esc(DB[i][COLS[0]])} – ${esc(DB[i]['Name of the customer'])}</option>`).join('')}</select><button class="tbtn" id="pbl">Blank form</button></div></div></div>`;
 if(rec&&S.pd)h+=`<div class="pn"><div class="sec">Database Details (editable – changes are saved to the DB)</div><div class="pb dg">${COLS.map(c=>`<label>${esc(c)}<input type="text" data-c="${esc(c)}" value="${esc(rec[c])}" ${c==COLS[0]?'disabled':''}></label>`).join('')}</div></div>`;
 const sv=rec?VIS[rec[COLS[0]]]?.d||{}:{},dr=S.draft||{},dflt=rec?{'Connection activation status':/closed/i.test(rec[COLS[23]])?'Inactive/Permanently Closed':'Active','Date of verification':today()}:{};
@@ -329,7 +437,7 @@ ${SEC.map(([t,fs])=>(t?`<div class="sec">${t}</div>`:'')+fs.map(([l,ty,op])=>fld
 <div class="pb"><button type="submit" class="btn p">Save &amp; mark visited</button> <button type="button" class="btn" id="prs">Reset</button></div></form></div>`;
 P.innerHTML=h;fbind(S.pf,P,()=>{keep();rPro()});
 $('cs').onchange=e=>{S.draft={};cp=e.target.value===''?null:+e.target.value;rPro()};$('pbl').onclick=()=>{S.draft={};cp=null;rPro()};$('prs').onclick=()=>{S.draft={};rPro()};
-$('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};$('dir').onclick=()=>directions(rec);
+$('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};$('dir').onclick=()=>directions(rec);$('pr').onclick=()=>makePdf([{rec,d:harvest(P,true)}],true,'FTTH_Proforma_'+(rec?rec[COLS[0]]:'blank')+'.pdf');
 P.querySelectorAll('.dg input').forEach(i=>i.onchange=()=>{DB[cp][i.dataset.c]=i.value;save(DB[cp][COLS[0]]);keep();toast('DB updated');rPro()});
 $('pf').onsubmit=e=>{e.preventDefault();if(!rec)return toast('Select a customer to save the survey');const d=harvest(P,true);
 VIS[rec[COLS[0]]]={t:d['Date of verification']||today(),d};VST[rec[COLS[0]]]=today();save();toast('Survey saved – marked visited')}}
