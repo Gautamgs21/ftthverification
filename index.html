@@ -181,6 +181,11 @@ $('v-dash').innerHTML=`<div class="pn">${head()}<div class="pb"><div class="fl">
 fbind(S.f,$('v-dash'),rDash);chart&&chart.destroy();chart=new Chart($('ch'),{type:'bar',data:{labels:['Total Records','Visited','Pending'],datasets:[{data:[rs.length,v,rs.length-v],backgroundColor:['#1a2b45','#2f855a','#8b734b']}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}})}
 /* ---------- reusable table (Edit DB / planner / visit list) ---------- */
 function setV(n,v){v?VST[n]=today():delete VST[n];save();toast(v?'Added to Visited':'Added to Non Visited')}
+function directions(r){const la=parseFloat(r&&r[COLS[20]]),lo=parseFloat(r&&r[COLS[21]]);if(!isFinite(la)||!isFinite(lo))return toast('No latitude/longitude saved for this customer');
+const nm=encodeURIComponent(r['Name of the customer']||'Customer'),g=`https://www.google.com/maps/dir/?api=1&destination=${la},${lo}&travelmode=driving`,ua=navigator.userAgent,web=()=>{if(!window.open(g,'_blank'))location.href=g};
+if(/iPhone|iPad|iPod/i.test(ua)){location.href=`maps://?daddr=${la},${lo}&dirflg=d`;setTimeout(()=>{if(!document.hidden)web()},1500)}
+else if(/Android/i.test(ua)){location.href=`geo:${la},${lo}?q=${la},${lo}(${nm})`;setTimeout(()=>{if(!document.hidden)web()},1500)}
+else web()}
 function openRec(n){S.draft={};cp=idx(n);go('pro')}
 function T(host,st,base,o={}){
 const draw=()=>{let a=base();if(st.list=='Visited')a=a.filter(i=>vis(DB[i]));else if(st.list=='Unvisited')a=a.filter(i=>!vis(DB[i]));
@@ -211,8 +216,8 @@ else if(t.matches('.sa')){pg.forEach(i=>{const n=String(DB[i][COLS[0]]);t.checke
 else if(t.matches('.rc')){const n=t.closest('tr').dataset.n;t.checked?st.sel.add(n):st.sel.delete(n);o.onsel&&o.onsel()}};
 host.ondblclick=e=>{clearTimeout(host._ct);const td=e.target.closest('td[data-k]');if(!td)return;td.contentEditable=true;td.focus();td.onblur=()=>{td.contentEditable=false;const i=idx(td.parentNode.dataset.n);if(i>=0&&DB[i][td.dataset.k]!=td.textContent){DB[i][td.dataset.k]=td.textContent;save(td.parentNode.dataset.n)}}};
 host.oncontextmenu=e=>{const tr=e.target.closest('tbody tr');if(!tr)return;e.preventDefault();const n=tr.dataset.n,cm=$('cm');(document.fullscreenElement||document.body).appendChild(cm);
-cm.innerHTML='<div data-v="1">✔ Add to Visited</div><div data-v="0">✖ Add to Non Visited</div>';cm.style.display='block';cm.style.left=Math.min(e.clientX,innerWidth-210)+'px';cm.style.top=Math.min(e.clientY,innerHeight-100)+'px';
-cm.onclick=ev=>{const d=ev.target.closest('[data-v]');if(d){setV(n,d.dataset.v=='1');draw()}}};
+cm.innerHTML='<div data-v="1">✔ Add to Visited</div><div data-v="0">✖ Add to Non Visited</div><div data-v="d">📍 Get Directions</div>';cm.style.display='block';cm.style.left=Math.min(e.clientX,innerWidth-210)+'px';cm.style.top=Math.min(e.clientY,innerHeight-100)+'px';
+cm.onclick=ev=>{const d=ev.target.closest('[data-v]');if(d){if(d.dataset.v=='d')directions(DB[idx(n)]);else{setV(n,d.dataset.v=='1');draw()}}}};
 host.ontouchstart=e=>{const tr=e.target.closest('tbody tr'),tw=host.querySelector('.tw');host._ts=tr?{n:tr.dataset.n,x:e.touches[0].clientX,y:e.touches[0].clientY,sl:tw.scrollLeft}:null};
 host.ontouchend=e=>{const s=host._ts;if(!s)return;host._ts=null;const c=e.changedTouches[0],dx=c.clientX-s.x,dy=c.clientY-s.y;if(Math.abs(dx)>80&&Math.abs(dy)<35&&host.querySelector('.tw').scrollLeft==s.sl){setV(s.n,dx>0);draw()}}};
 host._draw=draw;draw()}
@@ -224,7 +229,7 @@ if(S.vs){const s=SCH.find(x=>x.id==S.vs);if(!s){S.vs=null;return rVisits()}
 V.innerHTML=`<div class="pn">${head(`<button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div>`;
 $('bk').onclick=()=>{S.vs=null;rVisits()};T($('vt'),ST.view,()=>s.snos.map(idx).filter(i=>i>=0),{title:'SCHEDULED VISIT LIST'});return}
 const card=s=>`<div class="vc"><div><b>${esc(s.name)}</b><br><small>${s.date} · ${s.snos.length} places · ${s.snos.filter(n=>VST[n]).length} visited</small></div><div><button class="tbtn" data-o="${s.id}">Open</button> <button class="tbtn" data-d="${s.id}"><i class="fa-solid fa-trash"></i></button></div></div>`;
-const up=SCH.filter(s=>s.date>=td).sort((a,b)=>a.date.localeCompare(b.date)),pv=SCH.filter(s=>s.date<td).sort((a,b)=>b.date.localeCompare(a.date)),U=S.vtab=='up';
+const up=SCH.filter(s=>s.date>=td).sort((a,b)=>a.date.localeCompare(b.date)),pv=SCH.filter(s=>s.date<td).sort((a,b)=>b.date.localeCompare(a.date)),U=S.vtab=='up',D=S.vtab=='dir';
 if(!S.pdate)S.pdate=td;let fb;
 
 const isInPeriod = (dateStr, period) => {
@@ -256,7 +261,7 @@ const statsHtml = `
 `;
 
 V.innerHTML=`<div class="pn">${head()}
-<div class="pb tabs" style="border-bottom:none;padding-bottom:0;"><button class="btn ${U?'p':''}" data-t="up">Upcoming Visits (${up.length})</button><button class="btn ${U?'':'p'}" data-t="pv">Previous Visits (${pv.length})</button></div>
+<div class="pb tabs" style="border-bottom:none;padding-bottom:0;"><button class="btn ${U?'p':''}" data-t="up">Upcoming Visits (${up.length})</button><button class="btn ${S.vtab=='pv'?'p':''}" data-t="pv">Previous Visits (${pv.length})</button><button class="btn ${D?'p':''}" data-t="dir"><i class="fa-solid fa-location-arrow"></i> Find &amp; Directions</button></div>
 <div class="pb">
   <div class="fl" style="margin-bottom:15px;"><b>TIMEFRAME</b>
     <select id="v-time-filter" style="margin-left:8px;width:150px;">
@@ -269,9 +274,18 @@ V.innerHTML=`<div class="pn">${head()}
   </div>
   ${statsHtml}
 </div></div>`+
-(U?`<div class="pn"><div class="sec">Upcoming Visits</div>${up.map(card).join('')||'<div class="empty">No upcoming visits scheduled.</div>'}</div>`:`<div class="pn"><div class="sec">Previous Visits</div>${pv.map(card).join('')||'<div class="empty">No previous visits.</div>'}</div>`);
+(U?`<div class="pn"><div class="sec">Upcoming Visits</div>${up.map(card).join('')||'<div class="empty">No upcoming visits scheduled.</div>'}</div>`:D?`<div class="pn"><div class="sec">Find a Customer &amp; Get Directions</div><div class="pb"><input type="text" id="fq" placeholder="Search by name, customer ID, village, GP or address…" style="width:100%" value="${esc(S.fq||'')}"></div><div id="fr"></div></div>`:`<div class="pn"><div class="sec">Previous Visits</div>${pv.map(card).join('')||'<div class="empty">No previous visits.</div>'}</div>`);
 
 $('v-time-filter').onchange=e=>{S.vfilter=e.target.value;rVisits()};
+
+if(D){const SF=['Name of the customer','Customer unique id','Customer address','Village name','GP name','ONT MAC address'],fr=$('fr');
+const find=()=>{const q=$('fq').value.trim().toLowerCase();S.fq=$('fq').value;
+if(q.length<2){fr.innerHTML='<div class="empty">Type at least 2 characters to search.</div>';return}
+const ws=q.split(/\s+/),hit=[];for(let i=0;i<DB.length&&hit.length<50;i++){const t=SF.map(c=>DB[i][c]).join(' ').toLowerCase();if(ws.every(w=>t.includes(w)))hit.push(i)}
+fr.innerHTML=hit.length?hit.map(i=>{const r=DB[i],ok=isFinite(parseFloat(r[COLS[20]]))&&isFinite(parseFloat(r[COLS[21]]));return `<div class="vc"><div><b>${esc(r['Name of the customer'])}</b> ${vis(r)?'<small style="color:#2f855a">✔ visited</small>':''}<br><small>${esc(r['Village name'])} · ${esc(r['GP name'])} · ID ${esc(r['Customer unique id'])}</small><br><small>${esc(r['Customer address'])}</small></div>
+<div><button class="tbtn" data-dir="${i}" ${ok?'':'disabled title="No latitude/longitude"'}><i class="fa-solid fa-location-arrow"></i> Directions</button> <button class="tbtn" data-sv="${i}">Survey</button></div></div>`}).join('')+(hit.length==50?'<div class="empty">Showing the first 50 – refine your search.</div>':''):'<div class="empty">No matching customers.</div>'};
+$('fq').oninput=find;find();
+fr.onclick=e=>{const d=e.target.closest('[data-dir]'),v=e.target.closest('[data-sv]');if(d)directions(DB[+d.dataset.dir]);else if(v){S.draft={};cp=+v.dataset.sv;go('pro')}}}
 
 if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>DATE OF VISIT</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button></div></div></div><div class="pn" id="pt"></div>`);
 fbind(S.vf,V,rVisits);$('pdt').oninput=e=>S.pdate=e.target.value;$('pnm').oninput=e=>S.pname=e.target.value;
@@ -305,7 +319,8 @@ function harvest(P,all){const d={};P.querySelectorAll('#pf .f').forEach(f=>{cons
 function rPro(){rn=0;const P=$('v-pro'),fb=fbar(S.pf),rec=cp!=null?DB[cp]:null,L=fb.ix.slice(0,800);if(cp!=null&&!L.includes(cp))L.unshift(cp);
 const anyF=S.pf.some(Boolean),auto=c=>{if(rec)return rec[c];if(!anyF||!LOC.includes(c))return '';const u=[...new Set(fb.ix.map(i=>DB[i][c]).filter(x=>x!==''))];return u.length==1?u[0]:''};
 const keep=()=>{S.draft=harvest(P)};
-let h=`<div class="pn">${head(`<button class="tbtn" id="vdb" ${rec?'':'disabled'}><i class="fa-solid fa-database"></i> ${S.pd?'Hide':'View'} DB details</button>`)}<div class="pb"><div class="fl">${fb.html}</div>
+const ll=rec&&isFinite(parseFloat(rec[COLS[20]]))&&isFinite(parseFloat(rec[COLS[21]]));
+let h=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="dir" ${ll?'':'disabled'}><i class="fa-solid fa-location-arrow"></i> Directions</button><button class="tbtn" id="vdb" ${rec?'':'disabled'}><i class="fa-solid fa-database"></i> ${S.pd?'Hide':'View'} DB details</button></div>`)}<div class="pb"><div class="fl">${fb.html}</div>
 <div class="fl" style="margin-top:12px"><b>CUSTOMER</b><select id="cs"><option value="">Select customer… (${fb.ix.length})</option>${L.map(i=>`<option value="${i}" ${i==cp?'selected':''}>${esc(DB[i][COLS[0]])} – ${esc(DB[i]['Name of the customer'])}</option>`).join('')}</select><button class="tbtn" id="pbl">Blank form</button></div></div></div>`;
 if(rec&&S.pd)h+=`<div class="pn"><div class="sec">Database Details (editable – changes are saved to the DB)</div><div class="pb dg">${COLS.map(c=>`<label>${esc(c)}<input type="text" data-c="${esc(c)}" value="${esc(rec[c])}" ${c==COLS[0]?'disabled':''}></label>`).join('')}</div></div>`;
 const sv=rec?VIS[rec[COLS[0]]]?.d||{}:{},dr=S.draft||{},dflt=rec?{'Connection activation status':/closed/i.test(rec[COLS[23]])?'Inactive/Permanently Closed':'Active','Date of verification':today()}:{};
@@ -314,7 +329,7 @@ ${SEC.map(([t,fs])=>(t?`<div class="sec">${t}</div>`:'')+fs.map(([l,ty,op])=>fld
 <div class="pb"><button type="submit" class="btn p">Save &amp; mark visited</button> <button type="button" class="btn" id="prs">Reset</button></div></form></div>`;
 P.innerHTML=h;fbind(S.pf,P,()=>{keep();rPro()});
 $('cs').onchange=e=>{S.draft={};cp=e.target.value===''?null:+e.target.value;rPro()};$('pbl').onclick=()=>{S.draft={};cp=null;rPro()};$('prs').onclick=()=>{S.draft={};rPro()};
-$('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};
+$('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};$('dir').onclick=()=>directions(rec);
 P.querySelectorAll('.dg input').forEach(i=>i.onchange=()=>{DB[cp][i.dataset.c]=i.value;save(DB[cp][COLS[0]]);keep();toast('DB updated');rPro()});
 $('pf').onsubmit=e=>{e.preventDefault();if(!rec)return toast('Select a customer to save the survey');const d=harvest(P,true);
 VIS[rec[COLS[0]]]={t:d['Date of verification']||today(),d};VST[rec[COLS[0]]]=today();save();toast('Survey saved – marked visited')}}
