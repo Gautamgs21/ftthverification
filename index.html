@@ -112,7 +112,7 @@ const TITLES={dash:'Dashboard',db:'Edit DB',visits:'My Visits',pro:'Proforma',se
 let DB=[],VIS={},VST={},SCH=[],cur='dash',chart=null,cp=null;
 const mk=()=>({page:1,rows:25,col:null,dir:1,zoom:100,list:'All',hidden:new Set(),sel:new Set()});
 const ST={db:mk(),plan:mk(),view:mk()};
-const S={f:['','','','','',''],vf:['','','','','',''],pf:['','','','','',''],pd:false,vtab:'up',vs:null,pdate:'',pname:'',draft:{},vfilter:'overall'};
+const S={f:['','','','','',''],vf:['','','','','',''],pf:['','','','','',''],pd:false,vtab:'up',vs:null,pdate:'',pname:'',draft:{},drafts:{},vfilter:'overall'};
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const toast=m=>{const t=$('toast');(document.fullscreenElement||document.body).appendChild(t);t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2400)};
@@ -152,7 +152,7 @@ catch(x){$('le').textContent=x.message=='Failed to fetch'?'Cannot reach the serv
 async function enter(){$('lg').classList.remove('show');$('app').hidden=false;await pull();go('dash')}
 /* ---------- nav ---------- */
 $('cards').innerHTML=PAGES.map(p=>`<button class="nc" data-p="${p[0]}"><i class="fa-solid ${p[2]}"></i><span>${p[1].toUpperCase()}</span></button>`).join('');
-$('cards').onclick=e=>{const b=e.target.closest('.nc');if(!b)return;if(b.dataset.p=='pro'){cp=null;S.draft={}}go(b.dataset.p)};
+$('cards').onclick=e=>{const b=e.target.closest('.nc');if(!b)return;if(b.dataset.p=='pro'){cp=null;S.draft={};S.drafts={}}go(b.dataset.p)};
 const head=x=>`<div class="ph hd"><div><small>FTTH VERIFICATION</small><h2>${TITLES[cur]}</h2></div>${x||''}</div>`;
 function go(p){cur=p;document.querySelectorAll('.nc').forEach(b=>b.classList.toggle('on',b.dataset.p==p));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id=='v-'+p));
 ({dash:rDash,db:rDB,visits:rVisits,pro:rPro,set:rSet})[p]();$('dl').disabled=!DB.length}
@@ -196,7 +196,7 @@ else if(/Android/i.test(ua)){location.href=`geo:${la},${lo}?q=${la},${lo}(${nm})
 else web()}
 function bulkSel(sel,v){if(!sel.size)return toast('Select at least one row');let c=0;sel.forEach(n=>{n=String(n);if(v){if(!VST[n]){VST[n]=today();c++}}else if(VST[n]){delete VST[n];c++}});
 save();toast(`${sel.size} selected – ${c} changed to ${v?'Visited':'Unvisited'}`);rVisits()}
-function openRec(n){S.draft={};cp=idx(n);pickForm(cp);go('pro')}
+function openRec(n){S.draft={};S.drafts={};cp=idx(n);pickForm(cp);go('pro')}
 function T(host,st,base,o={}){
 const draw=()=>{let a=base();if(st.list=='Visited')a=a.filter(i=>vis(DB[i]));else if(st.list=='Unvisited')a=a.filter(i=>!vis(DB[i]));
 if(st.col!=null)a.sort((x,y)=>st.dir*String(DB[x][st.col]).localeCompare(String(DB[y][st.col]),undefined,{numeric:true}));
@@ -311,7 +311,7 @@ const ws=q.split(/\s+/),hit=[];for(let i=0;i<DB.length&&hit.length<50;i++){const
 fr.innerHTML=hit.length?hit.map(i=>{const r=DB[i],ok=isFinite(parseFloat(r[COLS[20]]))&&isFinite(parseFloat(r[COLS[21]]));return `<div class="vc"><div><b>${esc(r['Name of the customer'])}</b> ${vis(r)?'<small style="color:#2f855a">✔ visited</small>':''}<br><small>${esc(r['Village name'])} · ${esc(r['GP name'])} · ID ${esc(r['Customer unique id'])}</small><br><small>${esc(r['Customer address'])}</small></div>
 <div><button class="tbtn" data-dir="${i}" ${ok?'':'disabled title="No latitude/longitude"'}><i class="fa-solid fa-location-arrow"></i> Directions</button> <button class="tbtn" data-sv="${i}">Survey</button></div></div>`}).join('')+(hit.length==50?'<div class="empty">Showing the first 50 – refine your search.</div>':''):'<div class="empty">No matching customers.</div>'};
 $('fq').oninput=find;find();
-fr.onclick=e=>{const d=e.target.closest('[data-dir]'),v=e.target.closest('[data-sv]');if(d)directions(DB[+d.dataset.dir]);else if(v){S.draft={};cp=+v.dataset.sv;pickForm(cp);go('pro')}}}
+fr.onclick=e=>{const d=e.target.closest('[data-dir]'),v=e.target.closest('[data-sv]');if(d)directions(DB[+d.dataset.dir]);else if(v){S.draft={};S.drafts={};cp=+v.dataset.sv;pickForm(cp);go('pro')}}}
 
 if(U){fb=fbar(S.vf);V.insertAdjacentHTML('beforeend',`<div class="pn"><div class="sec">Plan a New Visit</div><div class="pb"><div class="fl">${fb.html}</div><div class="fl" style="margin-top:12px"><b>DATE OF VISIT</b><input type="date" id="pdt" value="${S.pdate}"><input type="text" id="pnm" placeholder="Visit name (optional)" value="${esc(S.pname)}"><button class="btn p sm" id="psv">Save Visit Plan (<span id="pcn">${ST.plan.sel.size}</span>)</button><button class="btn sm" id="ppdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="ppc">${ST.plan.sel.size}</span>)</button></div>
 <div class="fl" style="margin-top:12px"><b>BULK STATUS (SELECTED ROWS)</b><button class="btn sm" id="pbv"><i class="fa-solid fa-check"></i> Mark Visited</button><button class="btn sm" id="pbu"><i class="fa-solid fa-xmark"></i> Mark Unvisited</button></div></div></div><div class="pn" id="pt"></div>`);
@@ -330,20 +330,136 @@ const CONN=[['State','t','','',0,r=>r[COLS[1]]],['District','t','','',0,r=>r[COL
 const AUTO=new Set(CONN.filter(x=>x[5]).map(x=>x[0]));
 const SV=[['Measured Speed (Mbps) (https://myspeed.trai.gov.in/)','t'],['Is speed less than mandated 25 Mbps','r',YN],['Attach Geotagged Photograph','c','Attached'],['Location of the Connection (captured at the location)','h','Latitude|Longitude','',0,0,'',{sep:' ',blank:'_________'}],['Location significantly different from BSNL data?','r',YN,['No',' (Dist: ',')',8]],['Installation cost or hidden charges found?','r',YN,['Yes',' (Amt: ',')',8]],['Video Testimonial (If any, attach)','r',YN]];
 const SC=f5=>f5?'(Scale 1-5)':'(Scale 1-5, 1 being the lowest, 5 being the highest)';
-const CM=f5=>['Connection Metrics',...(f5?[]:[['Monthly tariff','t','','',0,0,'₹_________']]),['Is the pricing affordable','r',YN],['Were you charged any hidden/additional fees?','r','No|Yes',['Yes',' – If yes amount: ₹','',11]],['Installation cost paid','t','','',0,0,'₹_________'],['Have there been any price changes since installation','r','No|Yes',['Yes',' – If yes, amount: ₹','',12]],['Current Status of Connection','r','Active|Temporarily Down|Disconnected|Suspended'],['Date of Disconnection/Surrendered (if applicable)','d'],['Reasons for opting BNU FTTH Connection','c','Easily accessible|Less costly plans|Better services|No other service provider|Others'],['Internet Speed Satisfaction '+SC(f5),'r',S5],['Network Reliability '+SC(f5),'r',S5],['Frequency of Service Disruptions','r','Daily|Weekly|Monthly|Less than once in a month'],['Average Downtime per Month','r','< 5 hrs|5-10 hrs|> 10 hrs'],['Average Fault Restoration time','r',f5?'< 3 hrs|3-6 hrs|> 6 hrs':'< 6 hrs|6-12 hrs|> 12 hrs'],['Complaint Resolution by BSNL '+SC(f5),'r',S5]];
+/* Connection-metric block (items 6-19 / 4-17 / 6-19 / 1-14 / 9-21 of Section II).
+   No sub-heading is injected here – each form adds its own "Connection Metrics"
+   heading only where the annexure actually prints one (Forms IV and V). */
+const CMR=(f5,tariff)=>{const a=[];
+if(tariff)a.push(['Monthly tariff','t','','',0,0,'₹_________']);
+a.push(
+['Is the pricing affordable','r',YN],
+['Were you charged any hidden/additional fees?','r','No|Yes',['Yes',' – If yes amount: ₹','',11]],
+['Installation cost paid','t','','',0,0,'₹_________'],
+['Have there been any price changes since installation','r','No|Yes',['Yes',' – If yes, amount: ₹','',12]],
+['Current Status of Connection','r','Active|Temporarily Down|Disconnected|Suspended'],
+['Date of Disconnection/Surrendered (if applicable)','d'],
+['Reasons for opting BNU FTTH Connection','c','Easily accessible|Less costly plans|Better services|No other service provider|Others'],
+['Internet Speed Satisfaction '+SC(f5),'r',S5],
+['Network Reliability '+SC(f5),'r',S5],
+['Frequency of Service Disruptions','r','Daily|Weekly|Monthly|Less than once in a month'],
+['Average Downtime per Month','r','< 5 hrs|5-10 hrs|> 10 hrs'],
+['Average Fault Restoration time','r',f5?'< 3 hrs|3-6 hrs|> 6 hrs':'< 6 hrs|6-12 hrs|> 12 hrs'],
+['Complaint Resolution by BSNL '+SC(f5),'r',S5]);
+return a};
 const REL=['Relationship with Customer (In whose name the connection is registered)','r','Self (Registered Customer)|Spouse / Partner|Child / Dependent|Parent|Employee/Authorized Representative|Other',['Other',' ','',9]];
 const yn=l=>[l,'r',YN];
 const FORMS={
-1:{a:'Annexure-I',i1:'Items',t:'FORM I: HOUSEHOLD SURVEY',rs:1,s2:[['Name of Respondent','t'],['Age','r','<20|20-30|30-40|40-50|50-60|>60'],['Gender','r','Male|Female|Other'],REL,['Connected Hardware (Qty)','h','Computers|Tablets|Phones|Others'],...CM(0),'Economic Outcomes',['Perceived change in total household income after FTTH','r','Increased|Decreased|No Change'],['Whether any income is generated through internet, if so the source (Multiple selections)','c','No income|Work from home|Gig work|Freelancing|Online sales|Other',['Other',': ','',12]],'Educational Impact',['Whether internet is used for education purpose (Multiple selections)','c','Not being used for education|Online school classes|Competitive exam preparation|Used for vocational upskilling|Other',['Other',': ','',8]],['Whether usage of internet improved academic performance','r','Improved|Same|Worsened|Not Applicable'],'Agricultural Impact',['Whether internet was used to improve agriculture? (Multiple selections)','c','Internet not used for agriculture purpose|Market price information access|Weather forecasting|Soil health monitoring information|Crop advisory services|Pesticide/fertilizer information|Government scheme information|Agricultural news/updates|Other',['Other',': ','',7]],'Digital Inclusion & Social Connectivity',['Whether internet improved your social connectivity','r','Significant Improvement|Moderate Improvement|Marginal Improvement|No Change'],['Whether any female is using internet in the household','r','No|Yes',['Yes',', No. of females using internet: ','',8]],['Whether any senior citizen is using internet in the household','r','No|Yes',['Yes',', No. of senior citizens using internet: ','',8]]]},
-2:{a:'Annexure-II',i1:'Item',t:'FORM II: EDUCATIONAL INSTITUTE SURVEY',sg:'Principal/Headmaster',s2:[['Type of Institution','r','Primary|Secondary|Higher Secondary|College|Vocational|Other'],['Connected Hardware (Qty)','h','Computers|Smart Boards|Tablets'],['Total No. of students','h','Female|Male','',0,0,'',{sep:' ',nc:1}],...CM(0),'Educational Outcomes',yn('Whether students are using internet in the institution'),['Approximate percentage of female students using internet','r','<10%|10-50%|50%-90%|90-100%'],yn('Whether Internet is used for online classes'),['Whether internet is used for accessing online education resources','r','Frequent|Occasional|Never'],['Impact on Student Attendance after usage of internet','r','Improved|No Change|Worsened'],['Improvement in Academic Performance of students after usage of internet','r','Improved|Same|Worsened'],'Administrative Efficiency',yn('Whether internet is used for Admission process'),yn('Whether internet is used for payment of fees etc'),['Access to Teacher Training/Webinars','r','Regular|Rare|Never']]},
-3:{a:'Annexure-III',i1:'Item',t:'FORM III: HEALTHCARE INSTITUTION SURVEY',sg:'Medical Officer/Admin',s2:[['Primary Usage','c','Telemedicine|Patient Records|Administrative|Public Wi-Fi|Others',['Others',' ','',4]],['Connected Hardware (Qty)','h','Computers|Smart Phones|Tablets'],['Average No. of Out-Patients in a day','t'],['No. of Doctors','t'],['No. of nurses and other staff','t'],...CM(0),'Digital Health Outcomes',['Integration with National Digital Health Mission (NDHM) / EHR','r','Fully Integrated|Partially|None'],yn('Is internet being used for Appointment booking/OP Consultation'),yn('Is internet being used for prescribing medicines'),['Frequency of Telemedicine Consultations','r','Daily|Weekly|Rare|Never'],['Whether count of patients have changed after using internet','r','Increased|Decreased|No Change'],yn('Whether health information such as test reports is shared with patients using internet'),yn('Whether any online health awareness program has been conducted using internet'),'Operational Impact',yn('Whether any digital services of Government is being accessed using internet'),yn('Whether any online training is provided using internet to the healthcare staff'),yn('Whether internet is used for periodic reporting of health data/ inventory etc. to higher institutions'),yn('Whether internet is used for accessing government portals/schemes')]},
-4:{a:'Annexure-IV',t:'FORM IV: GOVERNMENT OFFICE SURVEY',sg:'Head of Office',s2:[...CM(0),'Governance & Public Service Delivery Impact',['Whether internet has resulted in reduction of Service Delivery Time to Citizens (eg. Issue of Certificates/Licenses)','r','Significantly|Moderately|No Change'],['Whether online processing of Document/files/e-file has increased after internet','r','Increased|No Change'],['Whether internet has improved Record Keeping efficiency','r','Improved|No Change'],['Whether internet has improved transparency','r','Improved|No Change'],yn('Whether internet is used for grievance redressal'),yn('Whether internet is used for accessing government portals'),yn('Whether internet is used for reporting to higher offices/ other government offices')]},
-5:{a:'Annexure-V',i1:'Items',t:'FORM V: PRIVATE ENTERPRISE SURVEY',rs:1,s2:[['Name of Respondent','t'],['Age','t'],['Gender','r','Male|Female|Other'],REL,yn('Is the business female owned'),['Connected Hardware (Qty)','h','Computers|Tablets|Phones|Others'],['Size of Enterprise','r','Micro/Self-Employed|Small|Medium|Others'],['Geographic spread of customers','r','Only local|Nearby towns|Other states via online|International'],...CM(1),'Business Growth & Adoption',['Adoption of Digital Payments (UPI/QR)','r','Significant Increase|Moderate|Already Using'],['Growth in Online Sales/E-commerce','r','High Growth|Some Growth|No Change|No online sale'],['Does the business use cloud-based services','r','Yes|No|Planned.'],['Which business services were enabled by FTTH?','c','Online sales/e-commerce|Digital payment processing|Customer communication (email, WhatsApp, etc.)|Video conferencing with clients/customers|Online advertising/marketing|Business accounting software|Inventory management system|Booking/appointment systems|Telecommunications services|Content creation/streaming|Freelance work services|Remote/ work from home|Supply chain management-|Other',['Other',': ','',7]],['Has the business developed its own website/mobile app?','r','Yes, Website|Yes, Mobile App|Both|No such Plans|Under Development'],['Are employees provided digital skills training?','r','Regularly|Occasionally|Rarely|Never'],'Economic Outcome',['Has the connection led to hiring new staff?','r','Yes|No|Reduction in staff after connection'],['Overall Business Revenue Change','r','Increased|No Change|Decreased'],yn('Has internet helped the business to expand its customer base in new geographic areas?'),['Impact of internet on operational costs','r','Increased|No Change|Decreased']]}};
-const byType=r=>{const t=String(r&&r[COLS[17]]||'');return /house/i.test(t)?1:/private/i.test(t)?5:/public/i.test(t)?4:0};
+1:{a:'Annexure-I',i1:'Items',t:'FORM I: HOUSEHOLD SURVEY',rs:1,s2:[
+  ['Name of Respondent','t'],
+  ['Age','r','<20|20-30|30-40|40-50|50-60|>60'],
+  ['Gender','r','Male|Female|Other'],
+  REL,
+  ['Connected Hardware (Qty)','h','Computers|Tablets|Phones|Others'],
+  ...CMR(0,1),
+  ['Perceived change in total household income after FTTH','r','Increased|Decreased|No Change'],
+  ['Whether any income is generated through internet, if so the source (Multiple selections)','c','No income|Work from home|Gig work|Freelancing|Online sales|Other',['Other',': ','',12]],
+  'Educational Impact',
+  ['Whether internet is used for education purpose (Multiple selections)','c','Not being used for education|Online school classes|Competitive exam preparation|Used for vocational upskilling|Other',['Other',': ','',8]],
+  ['Whether usage of internet improved academic performance','r','Improved|Same|Worsened|Not Applicable'],
+  'Agricultural Impact',
+  ['Whether internet was used to improve agriculture? (Multiple selections)','c','Internet not used for agriculture purpose|Market price information access|Weather forecasting|Soil health monitoring information|Crop advisory services|Pesticide/fertilizer information|Government scheme information|Agricultural news/updates|Other',['Other',': ','',7]],
+  'Digital Inclusion & Social Connectivity',
+  ['Whether internet improved your social connectivity','r','Significant Improvement|Moderate Improvement|Marginal Improvement|No Change'],
+  ['Whether any female is using internet in the household','r','No|Yes',['Yes',', No. of females using internet: ','',8]],
+  ['Whether any senior citizen is using internet in the household','r','No|Yes',['Yes',', No. of senior citizens using internet: ','',8]]
+]},
+2:{a:'Annexure-II',i1:'Item',t:'FORM II: EDUCATIONAL INSTITUTE SURVEY',sg:'Principal/Headmaster',s2:[
+  ['Type of Institution','r','Primary|Secondary|Higher Secondary|College|Vocational|Other'],
+  ['Connected Hardware (Qty)','h','Computers|Smart Boards|Tablets'],
+  ['Total No. of students','h','Female|Male','',0,0,'',{sep:' ',nc:1}],
+  ...CMR(0,1),
+  ['Whether students are using internet in the institution','r',YN],
+  ['Approximate percentage of female students using internet','r','<10%|10-50%|50%-90%|90-100%'],
+  ['Whether Internet is used for online classes','r',YN],
+  ['Whether internet is used for accessing online education resources','r','Frequent|Occasional|Never'],
+  ['Impact on Student Attendance after usage of internet','r','Improved|No Change|Worsened'],
+  ['Improvement in Academic Performance of students after usage of internet','r','Improved|Same|Worsened'],
+  'Administrative Efficiency',
+  ['Whether internet is used for Admission process','r',YN],
+  ['Whether internet is used for payment of fees etc','r',YN],
+  ['Access to Teacher Training/Webinars','r','Regular|Rare|Never']
+]},
+3:{a:'Annexure-III',i1:'Item',t:'FORM III: HEALTHCARE INSTITUTION SURVEY',sg:'Medical Officer/Admin',s2:[
+  ['Primary Usage','c','Telemedicine|Patient Records|Administrative|Public Wi-Fi|Others',['Others',' ','',4]],
+  ['Connected Hardware (Qty)','h','Computers|Smart Phones|Tablets'],
+  ['Average No. of Out-Patients in a day','t'],
+  ['No. of Doctors','t'],
+  ['No. of nurses and other staff','t'],
+  ...CMR(0,1),
+  ['Integration with National Digital Health Mission (NDHM) / EHR','r','Fully Integrated|Partially|None'],
+  ['Is internet being used for Appointment booking/OP Consultation','r',YN],
+  ['Is internet being used for prescribing medicines','r',YN],
+  ['Frequency of Telemedicine Consultations','r','Daily|Weekly|Rare|Never'],
+  ['Whether count of patients have changed after using internet','r','Increased|Decreased|No Change'],
+  ['Whether health information such as test reports is shared with patients using internet','r',YN],
+  ['Whether any online health awareness program has been conducted using internet','r',YN],
+  'Operational Impact',
+  ['Whether any digital services of Government is being accessed using internet','r',YN],
+  ['Whether any online training is provided using internet to the healthcare staff','r',YN],
+  ['Whether internet is used for periodic reporting of health data/ inventory etc. to higher institutions','r',YN],
+  ['Whether internet is used for accessing government portals/schemes','r',YN]
+]},
+4:{a:'Annexure-IV',t:'FORM IV: GOVERNMENT OFFICE SURVEY',sg:'Head of Office',s2:[
+  'Connection Metrics',
+  ...CMR(0,1),
+  'Governance & Public Service Delivery Impact',
+  ['Whether internet has resulted in reduction of Service Delivery Time to Citizens (eg. Issue of Certificates/Licenses)','r','Significantly|Moderately|No Change'],
+  ['Whether online processing of Document/files/e-file has increased after internet','r','Increased|No Change'],
+  ['Whether internet has improved Record Keeping efficiency','r','Improved|No Change'],
+  ['Whether internet has improved transparency','r','Improved|No Change'],
+  ['Whether internet is used for grievance redressal','r',YN],
+  ['Whether internet is used for accessing government portals','r',YN],
+  ['Whether internet is used for reporting to higher offices/ other government offices','r',YN]
+]},
+5:{a:'Annexure-V',i1:'Items',t:'FORM V: PRIVATE ENTERPRISE SURVEY',rs:1,s2:[
+  ['Name of Respondent','t'],
+  ['Age','t'],
+  ['Gender','r','Male|Female|Other'],
+  REL,
+  ['Is the business female owned','r',YN],
+  ['Connected Hardware (Qty)','h','Computers|Tablets|Phones|Others'],
+  ['Size of Enterprise','r','Micro/Self-Employed|Small|Medium|Others'],
+  ['Geographic spread of customers','r','Only local|Nearby towns|Other states via online|International'],
+  'Connection Metrics',
+  ...CMR(1,0),
+  'Business Growth & Adoption',
+  ['Adoption of Digital Payments (UPI/QR)','r','Significant Increase|Moderate|Already Using'],
+  ['Growth in Online Sales/E-commerce','r','High Growth|Some Growth|No Change|No online sale'],
+  ['Does the business use cloud-based services','r','Yes|No|Planned.'],
+  ['Which business services were enabled by FTTH?','c','Online sales/e-commerce|Digital payment processing|Customer communication (email, WhatsApp, etc.)|Video conferencing with clients/customers|Online advertising/marketing|Business accounting software|Inventory management system|Booking/appointment systems|Telecommunications services|Content creation/streaming|Freelance work services|Remote/ work from home|Supply chain management-|Other',['Other',': ','',7]],
+  ['Has the business developed its own website/mobile app?','r','Yes, Website|Yes, Mobile App|Both|No such Plans|Under Development'],
+  ['Are employees provided digital skills training?','r','Regularly|Occasionally|Rarely|Never'],
+  'Economic Outcome',
+  ['Has the connection led to hiring new staff?','r','Yes|No|Reduction in staff after connection'],
+  ['Overall Business Revenue Change','r','Increased|No Change|Decreased'],
+  ['Has internet helped the business to expand its customer base in new geographic areas?','r',YN],
+  ['Impact of internet on operational costs','r','Increased|No Change|Decreased']
+]}};
+/* Default form for a record: Household -> I, Private Enterprise -> V,
+   Public institution -> II / III / IV depending on the customer name. */
+const byType=r=>{const t=String(r&&r[COLS[17]]||'').toLowerCase();
+if(/house/.test(t))return 1;
+if(/private|enterprise/.test(t))return 5;
+if(/public|government|institution/.test(t)){
+  const s=[r['Name of the customer'],r['Customer address'],r['GP name'],r['Village name']].join(' ').toLowerCase();
+  if(/hospital|health|phc|chc|clinic|dispensar|medical|nursing|aiims|doctor/.test(s))return 3;
+  if(/school|college|universit|institute|vidyalaya|academy|education|training/.test(s))return 2;
+  return 4}
+return 0};
 const formOf=(r,d)=>+(d&&d.__form)||byType(r)||1;
+const formOfSaved=r=>formOf(r,VIS[r&&r[COLS[0]]]?.d);
 function pickForm(i){if(i>=0&&DB[i]){const r=DB[i];S.form=formOf(r,VIS[r[COLS[0]]]?.d)}}
 S.form=1;
-const mkRows=(arr,st)=>arr.map(a=>typeof a=='string'?{sub:a}:a.sub?a:{n:st?++st.n:0,l:a[0],ty:a[1],op:a[2]||'',ex:a[3],tm:a[4],fn:a[5],pf:a[6],hs:a[7]});
+const mkRows=(arr,st)=>arr.map(a=>typeof a==='string'?{sub:a}:a.sub?a:{n:st?++st.n:0,l:a[0],ty:a[1],op:a[2]||'',ex:a[3],tm:a[4],fn:a[5],pf:a[6],hs:a[7]});
 function lay(fm){const F=FORMS[fm],st={n:0};
 return[{h:'SECTION I: INSPECTION & CONNECTION DETAILS',s:'(To be filled by Inspecting Team)',rows:mkRows([...SI,{sub:'Inspecting Team Details',th:1},...RL.map(r=>[r,'h','Name|Designation|Mobile No.','',1]),{sub:'Connection Details'},...CONN],st)},
 {h:'SECTION II: SEIA (SOCIO-ECONOMIC IMPACT ASSESSMENT)',s:'(To be filled by Respondent)',rows:mkRows(F.s2,{n:0})},
@@ -352,7 +468,7 @@ return[{h:'SECTION I: INSPECTION & CONNECTION DETAILS',s:'(To be filled by Inspe
 {so:1,nn:1,rows:mkRows([['Date','d'],['Name & Designation of CCA Authorized Officer','t']],0)}]}
 const dfl=(r,rec)=>r.fn&&rec?String(r.fn(rec)):r.l=='Current Status of Connection'&&rec?(/closed/i.test(rec[COLS[23]])?'Disconnected':'Active'):'';
 const VL=['Whether any income is generated','Whether internet is used for education purpose','Whether internet was used to improve agriculture','Whether internet improved your social connectivity'],SING=new Set(['Educational Outcomes','Administrative Efficiency','Digital Health Outcomes','Operational Impact','Governance & Public Service Delivery Impact','Business Growth & Adoption','Economic Outcome']);
-function drawForm(doc,rec,d){d=d||{};const fm=formOf(rec,d),F=FORMS[fm],NV=[27,54,93],LM=58,RM=555,TOP=54,BOT=745;let y=0;
+function drawForm(doc,rec,d,fm){d=d||{};fm=+(fm||0)||formOf(rec,d)||1;if(!FORMS[fm])fm=1;const F=FORMS[fm],NV=[27,54,93],LM=58,RM=555,TOP=54,BOT=745;let y=0;
 const clean=t=>String(t??'').replace(/[^\n\x20-\x7E\u00A0-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u20B9]/g,'?');
 const setf=(sz,st,col)=>{doc.setFont('helvetica',st||'normal');doc.setFontSize(sz);doc.setTextColor(...(col||[0,0,0]))};
 const tw=(t,sz,st)=>{setf(sz,st);return doc.getTextWidth(clean(t).replace(/\u20B9/g,'R'))};
@@ -395,7 +511,7 @@ else if(k=='II'){if(!t){L=A;const it=F.i1||'Items';hd=[['S.No.',64],[it,113],[it
 else{L=VR;hd=[['S.No.',64],['Items',119],['Observations',310]]}
 if(!t&&i==0&&c.rows.length)y-=0;table(c.rows,L,hd,tt)})});
 }
-function makePdf(list,print,name){const doc=new jspdf.jsPDF({unit:'pt',format:'letter'});list.forEach((it,i)=>{if(i)doc.addPage();drawForm(doc,it.rec,it.d)});
+function makePdf(list,print,name){const doc=new jspdf.jsPDF({unit:'pt',format:'letter'});list.forEach((it,i)=>{if(i)doc.addPage();drawForm(doc,it.rec,it.d,it.form)});
 if(print){doc.autoPrint();const u=doc.output('bloburl');if(!window.open(u,'_blank'))doc.save(name)}else doc.save(name)}
 function bulkPdf(sel){const l=[...sel].map(n=>{const i=idx(n);return i>=0?{rec:DB[i],d:VIS[n]?.d||{}}:null}).filter(Boolean);if(!l.length)return toast('Select at least one row');
 toast('Preparing PDF of '+l.length+' record'+(l.length>1?'s':'')+'…');setTimeout(()=>makePdf(l,false,`FTTH_Proforma_${l.length}_${today()}.pdf`),60)}
@@ -413,18 +529,28 @@ function harvest(P,all){const d={};P.querySelectorAll('#pf .f').forEach(f=>{cons
 d[k]=t=='r'?(f.querySelector(':checked')?.value||''):t=='c'?[...f.querySelectorAll(':checked')].map(x=>x.value).join(', '):t=='h'?[...f.querySelectorAll('[data-h]')].map(i=>i.dataset.h+': '+i.value.trim()).join(' | '):f.querySelector('input').value;
 const x=f.querySelector('.xt');if(x)d[k+' |x']=x.value});d.__form=S.form;return d}
 function rPro(){rn=0;const P=$('v-pro'),fb=fbar(S.pf),rec=cp!=null?DB[cp]:null,L=fb.ix.slice(0,800);if(cp!=null&&!L.includes(cp))L.unshift(cp);
+if(!FORMS[S.form])S.form=1;
 const keep=()=>{S.draft=harvest(P)};const ll=rec&&isFinite(parseFloat(rec[COLS[20]]))&&isFinite(parseFloat(rec[COLS[21]]));
-let h=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="dir" ${ll?'':'disabled'}><i class="fa-solid fa-location-arrow"></i> Directions</button><button class="tbtn" id="pr" title="Print this proforma as a PDF"><i class="fa-solid fa-print"></i> Print</button><button class="tbtn" id="vdb" ${rec?'':'disabled'}><i class="fa-solid fa-database"></i> ${S.pd?'Hide':'View'} DB details</button></div>`)}<div class="pb"><div class="fl"><b>FORM TYPE</b><select id="fsel">${Object.keys(FORMS).map(k=>`<option value="${k}" ${k==S.form?'selected':''}>${FORMS[k].t}</option>`).join('')}</select></div>
+const svRaw=rec?(VIS[rec[COLS[0]]]?.d||{}):{};
+const sv=(rec&&((+svRaw.__form)||formOf(rec,svRaw))===S.form)?svRaw:{};
+const autoForm=rec?formOf(rec,VIS[rec[COLS[0]]]?.d):0;
+let h=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="dir" ${ll?'':'disabled'}><i class="fa-solid fa-location-arrow"></i> Directions</button><button class="tbtn" id="pr" title="Print this proforma as a PDF"><i class="fa-solid fa-print"></i> Print</button><button class="tbtn" id="vdb" ${rec?'':'disabled'}><i class="fa-solid fa-database"></i> ${S.pd?'Hide':'View'} DB details</button></div>`)}<div class="pb"><div class="fl"><b>FORM TYPE</b><select id="fsel">${Object.keys(FORMS).map(k=>`<option value="${k}" ${+k==S.form?'selected':''}>${FORMS[k].t}</option>`).join('')}</select><small id="fnote" style="color:var(--g);font-weight:700">${rec?(S.form==autoForm?'auto-selected for this customer':'manually selected – you can switch back to the default'):'select a form'}</small></div>
 <div class="fl" style="margin-top:12px">${fb.html}</div>
 <div class="fl" style="margin-top:12px"><b>CUSTOMER</b><select id="cs"><option value="">Select customer… (${fb.ix.length})</option>${L.map(i=>`<option value="${i}" ${i==cp?'selected':''}>${esc(DB[i][COLS[0]])} – ${esc(DB[i]['Name of the customer'])}</option>`).join('')}</select><button class="tbtn" id="pbl">Blank form</button></div></div></div>`;
 if(rec&&S.pd)h+=`<div class="pn"><div class="sec">Database Details (editable – changes are saved to the DB)</div><div class="pb dg">${COLS.map(c=>`<label>${esc(c)}<input type="text" data-c="${esc(c)}" value="${esc(rec[c])}" ${c==COLS[0]?'disabled':''}></label>`).join('')}</div></div>`;
-const sv=rec?VIS[rec[COLS[0]]]?.d||{}:{},dr=S.draft||{},F=FORMS[S.form],val=r=>{if(!AUTO.has(r.l)&&dr[r.l]!==undefined)return dr[r.l];if(!AUTO.has(r.l)&&sv[r.l]!==undefined)return sv[r.l];const x=dfl(r,rec);return x||(rec&&(r.l=='Date of Inspection'||r.l=='Date')?today():'')};
+const dr=S.draft||{},F=FORMS[S.form]||FORMS[1],val=r=>{if(!AUTO.has(r.l)&&dr[r.l]!==undefined)return dr[r.l];if(!AUTO.has(r.l)&&sv[r.l]!==undefined)return sv[r.l];const x=dfl(r,rec);return x||(rec&&(r.l=='Date of Inspection'||r.l=='Date')?today():'')};
 h+=`<div class="pn"><form id="pf"><div class="pb" style="text-align:center"><small>${F.a}</small><h2 style="margin:2px 0">${F.t}</h2><small>Department of Telecommunications — Socio-Economic Impact Assessment</small></div>${lay(S.form).map(s=>(s.h?`<div class="sec">${s.h}</div>`:'')+(s.s?`<div class="pb" style="padding:6px 16px"><small>${s.s}</small></div>`:'')+s.rows.map(r=>r.sub?`<div class="sec" style="background:#3b4f70;font-weight:600">${r.sub}</div>`:fld(r,val(r),dr[r.l+' |x']??sv[r.l+' |x'],!!rec&&AUTO.has(r.l))).join('')).join('')}
 <div class="pb"><button type="submit" class="btn p">Save &amp; mark visited</button> <button type="button" class="btn" id="prs">Reset</button></div></form></div>`;
 P.innerHTML=h;fbind(S.pf,P,()=>{keep();rPro()});
-$('fsel').onchange=e=>{keep();S.form=+e.target.value;rPro()};
-$('cs').onchange=e=>{S.draft={};cp=e.target.value===''?null:+e.target.value;pickForm(cp);rPro()};$('pbl').onclick=()=>{S.draft={};cp=null;rPro()};$('prs').onclick=()=>{S.draft={};rPro()};
-$('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};$('dir').onclick=()=>directions(rec);$('pr').onclick=()=>makePdf([{rec,d:harvest(P,true)}],true,'FTTH_Proforma_'+(rec?rec[COLS[0]]:'blank')+'.pdf');
+$('fsel').onchange=e=>{
+  const cur=harvest(P);S.drafts[S.form]=cur;
+  S.form=+e.target.value;
+  const svR=rec?(VIS[rec[COLS[0]]]?.d||{}):{};
+  S.draft=S.drafts[S.form]?{...S.drafts[S.form]}:(rec&&((+svR.__form)||formOf(rec,svR))===S.form?{...svR}:{});
+  rPro()};
+$('cs').onchange=e=>{S.draft={};S.drafts={};cp=e.target.value===''?null:+e.target.value;pickForm(cp);rPro()};
+$('pbl').onclick=()=>{S.draft={};S.drafts={};cp=null;rPro()};$('prs').onclick=()=>{S.draft={};S.drafts={};rPro()};
+$('vdb').onclick=()=>{keep();S.pd=!S.pd;rPro()};$('dir').onclick=()=>directions(rec);$('pr').onclick=()=>makePdf([{rec,d:harvest(P,true),form:S.form}],true,'FTTH_Proforma_'+(rec?rec[COLS[0]]:'blank')+'.pdf');
 P.querySelectorAll('.dg input').forEach(i=>i.onchange=()=>{DB[cp][i.dataset.c]=i.value;save(DB[cp][COLS[0]]);keep();toast('DB updated');rPro()});
 $('pf').onsubmit=e=>{e.preventDefault();if(!rec)return toast('Select a customer to save the survey');const d=harvest(P,true);
 VIS[rec[COLS[0]]]={t:d['Date']||today(),d};VST[rec[COLS[0]]]=today();save();toast('Survey saved – marked visited')}}
