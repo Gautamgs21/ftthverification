@@ -8,6 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{--n:#1a2b45;--g:#8b734b;--b:#f3ede4;--bg:#f1f5f9;--bd:#cbd5e1;--font:'Aptos Serif', Aptos, 'Merriweather', Georgia, serif}
 *{box-sizing:border-box}[hidden]{display:none!important}
@@ -88,6 +90,8 @@ tr.vis td{background:#f0fbf3!important}tr.vis td:first-child{box-shadow:inset 4p
 .row .f{min-width:0}.row .xt{display:block;margin-top:8px;width:100%;max-width:340px}
 @media(max-width:1024px){.w,main{max-width:100%}}
 @media(max-width:700px){.nc{width:calc(33.3% - 10px);min-width:90px;height:78px}.cards{gap:10px;flex:1 1 100%}.acts{flex-direction:row;flex:1 1 100%}.acts .btn{flex:1}.row{grid-template-columns:1fr}.tb .sp{margin-left:0}}
+.mpin{background:none;border:0;font-size:32px;line-height:1;text-shadow:0 1px 3px #0006}.mpin i{display:block}
+#vmapc{height:420px;border-radius:0 0 8px 8px;z-index:1}
 </style></head><body>
 <div class="ov show" id="lg"><form class="lc" id="lf"><h1>FTTH Verification</h1><p>SIGN IN</p>
 <input type="text" id="lu" placeholder="Username" autocomplete="username"><input type="password" id="lp" placeholder="Password" autocomplete="current-password">
@@ -111,7 +115,7 @@ const PAGES=[['dash','Dashboard','fa-gauge-high'],['db','Edit DB','fa-database']
 const TITLES={dash:'Dashboard',db:'Edit DB',visits:'My Visits',pro:'Proforma',set:'Settings'};
 let DB=[],VIS={},VST={},SCH=[],cur='dash',chart=null,cp=null;
 const mk=()=>({page:1,rows:25,col:null,dir:1,zoom:100,list:'All',hidden:new Set(),sel:new Set()});
-const ST={db:mk(),plan:mk(),view:mk()};
+const ST={db:mk(),plan:mk(),view:mk()};let VMAP=null,VLAY=null;
 const S={f:['','','','','',''],vf:['','','','','',''],pf:['','','','','',''],pd:false,vtab:'up',vs:null,pdate:'',pname:'',draft:{},drafts:{},vfilter:'overall'};
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -239,21 +243,36 @@ host._draw=draw;draw()}
 const parseIds=t=>[...new Set(String(t||'').split(/[\s,;|]+/).map(x=>x.trim()).filter(Boolean))];
 function bulkById(ids,v){const m=new Map();DB.forEach(r=>{const k=String(r['Customer unique id']??'').trim().toLowerCase();if(k){if(!m.has(k))m.set(k,[]);m.get(k).push(String(r[COLS[0]]))}});
 let ok=0,ch=0;const nf=[];ids.forEach(id=>{const a=m.get(id.toLowerCase());if(!a){nf.push(id);return}a.forEach(n=>{ok++;if(v){if(!VST[n]){VST[n]=today();ch++}}else if(VST[n]){delete VST[n];ch++}})});return{ok,ch,nf}}
-function rDB(){$('v-db').innerHTML=`<div class="pn">${head()}</div>
-<div class="pn"><div class="sec">Bulk Status Update by Customer Unique ID</div><div class="pb"><textarea id="bid" class="bk" placeholder="Paste Customer unique IDs here – one per line, or separated by commas / spaces"></textarea>
-<div class="fl" style="margin-top:10px"><button class="btn p sm" id="bidv"><i class="fa-solid fa-check"></i> Move to Visited</button><button class="btn sm" id="bidu"><i class="fa-solid fa-xmark"></i> Move to Unvisited</button><button class="btn sm" id="bidc">Clear</button><small id="bidn" style="color:var(--g);font-weight:700">0 IDs detected</small></div><div class="nf" id="bnf" hidden></div></div></div>
+function rDB(){$('v-db').innerHTML=`<div class="pn">${head(`<button class="tbtn" id="bidopen"><i class="fa-solid fa-list-check"></i> Bulk Status Update</button>`)}</div>
+<div class="ov" id="bidm"><div class="md"><button class="x" id="bidx" title="Close">&times;</button><h3>Bulk Status Update by Customer Unique ID</h3><div class="ml"><textarea id="bid" class="bk" placeholder="Paste Customer unique IDs here – one per line, or separated by commas / spaces"></textarea>
+<div class="fl" style="margin-top:10px"><button class="btn p sm" id="bidv"><i class="fa-solid fa-check"></i> Move to Visited</button><button class="btn sm" id="bidu"><i class="fa-solid fa-xmark"></i> Move to Unvisited</button><button class="btn sm" id="bidc">Clear</button><small id="bidn" style="color:var(--g);font-weight:700">0 IDs detected</small></div><div class="nf" id="bnf" hidden></div></div></div></div>
 <div class="pn" id="dbt"></div>`;T($('dbt'),ST.db,()=>DB.map((r,i)=>i));
 const ta=$('bid'),cnt=()=>{const n=parseIds(ta.value).length;$('bidn').textContent=n+' ID'+(n==1?'':'s')+' detected'};ta.oninput=cnt;
 const run=v=>{const ids=parseIds(ta.value);if(!ids.length)return toast('Paste at least one Customer unique id');if(!DB.length)return toast('No database loaded');
 const r=bulkById(ids,v);if(r.ch)save();$('dbt')._draw();const nf=$('bnf');nf.hidden=!r.nf.length;nf.innerHTML=r.nf.length?'Not found ('+r.nf.length+'): '+r.nf.map(esc).join(', '):'';
 toast(`${r.ok} record${r.ok==1?'':'s'} matched – ${r.ch} changed to ${v?'Visited':'Unvisited'}${r.nf.length?', '+r.nf.length+' ID'+(r.nf.length==1?'':'s')+' not found':''}`)};
+$('bidopen').onclick=()=>{$('bidm').classList.add('show');setTimeout(()=>ta.focus(),50)};$('bidx').onclick=()=>$('bidm').classList.remove('show');$('bidm').onclick=e=>{if(e.target.id=='bidm')$('bidm').classList.remove('show')};
 $('bidv').onclick=()=>run(true);$('bidu').onclick=()=>run(false);$('bidc').onclick=()=>{ta.value='';cnt();$('bnf').hidden=true}}
 /* ---------- My Visits ---------- */
 function rVisits(){const V=$('v-visits'),td=today();
 if(S.vs){const s=SCH.find(x=>x.id==S.vs);if(!s){S.vs=null;return rVisits()}
-V.innerHTML=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="bsa">Select all</button><button class="tbtn" id="bpdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="vpc">${ST.view.sel.size}</span>)</button><button class="tbtn" id="bvv"><i class="fa-solid fa-check"></i> Mark Visited</button><button class="tbtn" id="bvu"><i class="fa-solid fa-xmark"></i> Mark Unvisited</button><button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button></div>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div>`;
-$('bk').onclick=()=>{S.vs=null;rVisits()};const upd=()=>$('vpc').textContent=ST.view.sel.size;T($('vt'),ST.view,()=>s.snos.map(idx).filter(i=>i>=0),{title:'SCHEDULED VISIT LIST',sel:1,onsel:upd});
-$('bsa').onclick=()=>{const a=s.snos.map(String);ST.view.sel=ST.view.sel.size==a.length?new Set():new Set(a);$('vt')._draw();upd()};$('bpdf').onclick=()=>bulkPdf(ST.view.sel);$('bvv').onclick=()=>bulkSel(ST.view.sel,true);$('bvu').onclick=()=>bulkSel(ST.view.sel,false);return}
+V.innerHTML=`<div class="pn">${head(`<div class="fl"><button class="tbtn" id="bsa">Select all</button><button class="tbtn" id="bpdf"><i class="fa-solid fa-file-pdf"></i> Save selected as PDF (<span id="vpc">${ST.view.sel.size}</span>)</button><button class="tbtn" id="bvv"><i class="fa-solid fa-check"></i> Mark Visited</button><button class="tbtn" id="bvu"><i class="fa-solid fa-xmark"></i> Mark Unvisited</button><button class="tbtn" id="bk"><i class="fa-solid fa-arrow-left"></i> Back</button></div>`)}<div class="pb"><b>${esc(s.name)}</b> · ${s.date} · ${s.snos.length} places</div></div><div class="pn" id="vt"></div><div class="pn" id="vmap"><div class="sec">MAP – LOCATIONS IN THIS VISIT <small id="vmapi" style="font-weight:400;margin-left:8px"></small></div><div id="vmapc"></div></div>`;
+const vmap=()=>{const box=$('vmapc'),info=$('vmapi');if(!box)return;
+if(!window.L){box.innerHTML='<div class="empty">The map could not load – check your internet connection.</div>';return}
+if(!VMAP||VMAP._container!==box){try{VMAP&&VMAP.remove()}catch(e){}VMAP=L.map(box,{scrollWheelZoom:false}).setView([10.5,76.5],8);VMAP.on('click',()=>VMAP.scrollWheelZoom.enable());
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(VMAP);VLAY=L.layerGroup().addTo(VMAP)}
+VLAY.clearLayers();const pin=c=>L.divIcon({className:'mpin',html:`<i class="fa-solid fa-location-dot" style="color:${c}"></i>`,iconSize:[26,34],iconAnchor:[13,32],popupAnchor:[0,-30]}),
+ll=r=>{const a=parseFloat(r[COLS[20]]),b=parseFloat(r[COLS[21]]);return isFinite(a)&&isFinite(b)&&(a||b)?[a,b]:null},
+inPlan=new Set(s.snos.map(String)),sel=[...ST.view.sel].filter(n=>inPlan.has(String(n))),pts=[];
+if(sel.length){sel.forEach(n=>{const i=idx(n);if(i<0)return;const r=DB[i],p=ll(r);if(!p)return;pts.push(p);
+L.marker(p,{icon:pin('#1a2b45')}).bindPopup(`<b>${esc(r['Name of the customer'])}</b><br>${esc(r['Village name'])}<br><small>${esc(r['Customer address'])}</small><br><a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${p[0]},${p[1]}&travelmode=driving">Get directions</a>`).bindTooltip(esc(r['Name of the customer'])).addTo(VLAY)});
+info.textContent=`Showing ${pts.length} selected place${pts.length==1?'':'s'}`+(pts.length<sel.length?` (${sel.length-pts.length} without coordinates)`:'')}
+else{const vg={};s.snos.map(idx).filter(i=>i>=0).forEach(i=>{const r=DB[i],p=ll(r);if(!p)return;const k=r['Village name']||'(village)';(vg[k]=vg[k]||{la:0,lo:0,n:0});vg[k].la+=p[0];vg[k].lo+=p[1];vg[k].n++});
+Object.entries(vg).forEach(([k,v])=>{const p=[v.la/v.n,v.lo/v.n];pts.push(p);L.marker(p,{icon:pin('#8b734b')}).bindPopup(`<b>${esc(k)}</b><br>${v.n} customer${v.n==1?'':'s'} in this visit`).bindTooltip(esc(k)+' ('+v.n+')').addTo(VLAY)});
+info.textContent=pts.length?`No row selected – showing ${pts.length} village location${pts.length==1?'':'s'}`:'No latitude/longitude available for this list'}
+setTimeout(()=>{VMAP.invalidateSize();if(pts.length==1)VMAP.setView(pts[0],15);else if(pts.length)VMAP.fitBounds(pts,{padding:[30,30],maxZoom:16})},60)};
+$('bk').onclick=()=>{S.vs=null;rVisits()};const upd=()=>$('vpc').textContent=ST.view.sel.size;T($('vt'),ST.view,()=>s.snos.map(idx).filter(i=>i>=0),{title:'SCHEDULED VISIT LIST',sel:1,onsel:()=>{upd();vmap()}});vmap();
+$('bsa').onclick=()=>{const a=s.snos.map(String);ST.view.sel=ST.view.sel.size==a.length?new Set():new Set(a);$('vt')._draw();upd();vmap()};$('bpdf').onclick=()=>bulkPdf(ST.view.sel);$('bvv').onclick=()=>bulkSel(ST.view.sel,true);$('bvu').onclick=()=>bulkSel(ST.view.sel,false);return}
 const card=s=>`<div class="vc"><div><b>${esc(s.name)}</b><br><small>${s.date} · ${s.snos.length} places · ${s.snos.filter(n=>VST[n]).length} visited</small></div><div><button class="tbtn" data-o="${s.id}">Open</button> <button class="tbtn" data-d="${s.id}"><i class="fa-solid fa-trash"></i></button></div></div>`;
 const up=SCH.filter(s=>s.date>=td).sort((a,b)=>a.date.localeCompare(b.date)),pv=SCH.filter(s=>s.date<td).sort((a,b)=>b.date.localeCompare(a.date)),U=S.vtab=='up',D=S.vtab=='dir';
 if(!S.pdate)S.pdate=td;let fb;
